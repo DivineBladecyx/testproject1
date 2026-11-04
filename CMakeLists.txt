@@ -15,7 +15,6 @@ find_package(Qt6 REQUIRED COMPONENTS
     WebSockets
     Quick
     Qml
-    Quick3D
     QuickWidgets
     Svg
 )
@@ -99,7 +98,6 @@ target_link_libraries(simm-treatment PRIVATE
     simm_shared_core
     Qt6::Quick
     Qt6::Qml
-    Qt6::Quick3D
     Qt6::QuickWidgets
 )
 
@@ -164,7 +162,6 @@ target_link_libraries(SIMM PRIVATE
     simm_shared_core
     Qt6::Quick
     Qt6::Qml
-    Qt6::Quick3D
     Qt6::QuickWidgets
 )
 
