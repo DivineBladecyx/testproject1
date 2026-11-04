@@ -1,0 +1,37 @@
+{
+    "classes": [
+        {
+            "className": "DataProvider",
+            "lineNumber": 8,
+            "object": true,
+            "qualifiedClassName": "DataProvider",
+            "signals": [
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "key",
+                            "type": "QString"
+                        },
+                        {
+                            "name": "value",
+                            "type": "double"
+                        }
+                    ],
+                    "index": 0,
+                    "lineNumber": 22,
+                    "name": "valueChanged",
+                    "returnType": "void"
+                }
+            ],
+            "superClasses": [
+                {
+                    "access": "public",
+                    "name": "QObject"
+                }
+            ]
+        }
+    ],
+    "inputFile": "DataProvider.h",
+    "outputRevision": 69
+}

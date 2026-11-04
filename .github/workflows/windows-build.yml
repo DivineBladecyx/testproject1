@@ -1,0 +1,58 @@
+name: Build Windows Release
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch: # 支持在 GitHub 网页上随时手动点击“Run workflow”
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up MSVC Developer Command Prompt
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Install Ninja
+        run: choco install ninja
+
+      - name: Install Qt 6
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.8.0'
+          host: 'windows'
+          target: 'desktop'
+          arch: 'win64_msvc2022_64'
+          modules: 'qtwebsockets qtquick3d qtsvg qtquicktimeline'
+
+      - name: Configure CMake
+        shell: cmd
+        run: |
+          cmake -B build -G "Ninja" -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build SIMM Executable
+        shell: cmd
+        run: |
+          cmake --build build --config Release --target SIMM
+
+      - name: Collect Release Package (windeployqt)
+        shell: cmd
+        run: |
+          mkdir SIMM_Windows_x64
+          mkdir SIMM_Windows_x64\config
+          copy build\SIMM.exe SIMM_Windows_x64\
+          copy config\app_config.ini SIMM_Windows_x64\config\
+          windeployqt --qmldir . SIMM_Windows_x64\SIMM.exe
+
+      - name: Upload Windows Portable Zip
+        uses: actions/upload-artifact@v4
+        with:
+          name: SIMM-Windows-x64
+          path: SIMM_Windows_x64
+          retention-days: 14
+

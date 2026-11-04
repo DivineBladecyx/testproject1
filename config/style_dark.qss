@@ -1,0 +1,278 @@
+/* ==========================================================================
+   SIMM Medical Treatment Console - Fluent WinUI 3 Dark Theme
+   ========================================================================== */
+
+QMainWindow,
+QWidget {
+    background: #0A0D14;
+    color: #F1F5F9;
+    font-family: "Helvetica Neue", "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    font-size: 13px;
+}
+
+/* --- 卡片与分组容器 (Mica / Acrylic Surfaces) --- */
+QFrame#cardFrame,
+QFrame#panelFrame,
+QGroupBox {
+    background: #121824;
+    border: 1px solid #1E293B;
+    border-radius: 8px;
+    margin-top: 10px;
+    padding-top: 8px;
+}
+
+QGroupBox::title {
+    subcontrol-origin: margin;
+    left: 10px;
+    padding: 0 6px;
+    color: #38BDF8;
+    font-weight: 600;
+    font-size: 13px;
+}
+
+/* 消除 3D 机械床视口的生硬边框，实现无缝空间沉浸 */
+QGroupBox#groupBoxBedPreview {
+    background: #0D111A;
+    border: 1px solid #1E293B;
+    border-radius: 8px;
+}
+
+/* --- 文本与标签 --- */
+QLabel {
+    background: transparent;
+    color: #CBD5E1;
+}
+
+QLabel#label_title_patient,
+QLabel#label_title_doctor,
+QLabel#label_title_room,
+QLabel#label_title_time,
+QLabel#label_title_plan,
+QLabel#label_title_flow,
+QLabel#label_title_status,
+QLabel#label_title_ops,
+QLabel#label_title_bed,
+QLabel#label_preview_title {
+    color: #38BDF8;
+    font-weight: 600;
+    font-size: 14px;
+}
+
+QLabel#patient_name,
+QLabel#label_user,
+QLabel#label_room,
+QLabel#label_time {
+    color: #F8FAFC;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+QLabel#labelTopPrescriptionDose,
+QLabel#label_30 {
+    color: #38BDF8;
+    font-size: 18px;
+    font-weight: 700;
+    font-family: "Menlo", "Monaco", monospace;
+}
+
+/* --- 按钮 (Fluent WinUI 3 交互) --- */
+QPushButton {
+    background: #1E293B;
+    border: 1px solid #334155;
+    border-radius: 6px;
+    padding: 6px 14px;
+    min-height: 22px;
+    color: #F8FAFC;
+    font-weight: 500;
+    font-size: 12px;
+}
+
+QPushButton:hover {
+    background: #27354A;
+    border: 1px solid #0EA5E9;
+    color: #FFFFFF;
+}
+
+QPushButton:pressed {
+    background: #0F172A;
+    border: 1px solid #0284C7;
+}
+
+QPushButton:disabled {
+    background: #151D2A;
+    color: #475569;
+    border: 1px solid #1E293B;
+}
+
+/* 核心行动按钮 (Call to Action: Accent) */
+QPushButton#beamApply_pushButton,
+QPushButton#confirmPlan_pushButton {
+    background: #0284C7;
+    color: #FFFFFF;
+    border: 1px solid #38BDF8;
+    font-weight: 600;
+}
+
+QPushButton#beamApply_pushButton:hover,
+QPushButton#confirmPlan_pushButton:hover {
+    background: #0EA5E9;
+    border: 1px solid #7DD3FC;
+}
+
+QPushButton#beamApply_pushButton:pressed,
+QPushButton#confirmPlan_pushButton:pressed {
+    background: #0369A1;
+}
+
+/* 危险/注销按钮 */
+QPushButton#logout_pushButton {
+    color: #F87171;
+    border: 1px solid #7F1D1D;
+    background: #2D1418;
+}
+
+QPushButton#logout_pushButton:hover {
+    background: #451A20;
+    border: 1px solid #EF4444;
+    color: #FCA5A5;
+}
+
+/* --- 输入控件、下拉框、表格与面板 --- */
+QComboBox,
+QLineEdit,
+QTextEdit,
+QPlainTextEdit,
+QTableWidget,
+QTableView,
+QTabWidget::pane {
+    background: #0F172A;
+    border: 1px solid #1E293B;
+    border-radius: 6px;
+    color: #F1F5F9;
+}
+
+QComboBox,
+QLineEdit {
+    min-height: 28px;
+    padding: 2px 8px;
+}
+
+QLineEdit:focus,
+QComboBox:focus {
+    border: 1px solid #0EA5E9;
+    background: #141E33;
+}
+
+QComboBox::drop-down {
+    subcontrol-origin: padding;
+    subcontrol-position: top right;
+    width: 22px;
+    border-left: 1px solid #1E293B;
+}
+
+QComboBox QAbstractItemView {
+    background: #0F172A;
+    border: 1px solid #334155;
+    selection-background-color: #0284C7;
+    selection-color: #FFFFFF;
+}
+
+/* 表格 (Table View) 极简大气设计 */
+QTableWidget,
+QTableView {
+    gridline-color: #1E293B;
+    alternate-background-color: #131C2E;
+    selection-background-color: #1E3A5F;
+    selection-color: #FFFFFF;
+}
+
+QHeaderView::section {
+    background: #0F172A;
+    color: #94A3B8;
+    padding: 6px 8px;
+    border: none;
+    border-bottom: 1px solid #1E293B;
+    font-weight: 600;
+    font-size: 12px;
+}
+
+/* 标签页 (Tab Widget) */
+QTabBar::tab {
+    background: #0F172A;
+    border: 1px solid #1E293B;
+    border-bottom: none;
+    padding: 6px 14px;
+    margin-right: 4px;
+    border-top-left-radius: 6px;
+    border-top-right-radius: 6px;
+    color: #94A3B8;
+}
+
+QTabBar::tab:selected {
+    background: #1E293B;
+    border-color: #38BDF8;
+    color: #38BDF8;
+    font-weight: 600;
+}
+
+QTabBar::tab:hover:!selected {
+    background: #162032;
+    color: #E2E8F0;
+}
+
+/* 滚动条 (Scroll Bar) 极简隐形设计 */
+QScrollBar:vertical {
+    background: #0A0D14;
+    width: 8px;
+    margin: 0px;
+    border-radius: 4px;
+}
+
+QScrollBar::handle:vertical {
+    background: #334155;
+    min-height: 20px;
+    border-radius: 4px;
+}
+
+QScrollBar::handle:vertical:hover {
+    background: #475569;
+}
+
+QScrollBar::add-line:vertical,
+QScrollBar::sub-line:vertical {
+    height: 0px;
+}
+
+QScrollBar:horizontal {
+    background: #0A0D14;
+    height: 8px;
+    margin: 0px;
+    border-radius: 4px;
+}
+
+QScrollBar::handle:horizontal {
+    background: #334155;
+    min-width: 20px;
+    border-radius: 4px;
+}
+
+QScrollBar::handle:horizontal:hover {
+    background: #475569;
+}
+
+QScrollBar::add-line:horizontal,
+QScrollBar::sub-line:horizontal {
+    width: 0px;
+}
+
+/* 状态栏 (Status Bar) */
+QStatusBar {
+    background: #0A0D14;
+    color: #94A3B8;
+    border-top: 1px solid #1E293B;
+    font-size: 12px;
+}
+
+QStatusBar::item {
+    border: none;
+}

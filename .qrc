@@ -1,0 +1,18 @@
+<RCC>
+    <qresource prefix="/">
+        <file>icons/eye.svg</file>
+        <file>icons/eye-slash.svg</file>
+        <file>icons/video.png</file>
+        <file>icons/queen.png</file>
+        <file>icons/start_gray.png</file>
+        <file>icons/mid_gray.png</file>
+        <file>icons/end_gray.png</file>
+        <file>icons/start_active.png</file>
+        <file>icons/mid_active.png</file>
+        <file>icons/end_active.png</file>
+        <file>icons/start_done.png</file>
+        <file>icons/mid_done.png</file>
+        <file>icons/end_done.png</file>
+    </qresource>
+    <qresource prefix="/qss"/>
+</RCC>

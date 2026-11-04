@@ -1,0 +1,6 @@
+<RCC>
+    <qresource prefix="/qss"/>
+	<qresource prefix="/icons">
+    <file alias="simm.ico">resources/simm.ico</file>
+</qresource>
+</RCC>

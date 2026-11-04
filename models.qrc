@@ -1,0 +1,8 @@
+<RCC>
+    <qresource prefix="/models">
+        <file>Bed3DView.qml</file>
+        <file>StepProgressBar.qml</file>
+        <file>eye.svg</file>
+        <file>eye-slash.svg</file>
+    </qresource>
+</RCC>

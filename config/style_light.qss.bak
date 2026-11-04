@@ -1,0 +1,1136 @@
+/* Treatment workspace: patient / execution / dispatch */
+QMainWindow,
+QWidget {
+    background: #F3F7FC;
+    color: #24364B;
+    font-family: "Microsoft YaHei";
+    font-size: 15px;
+}
+
+QFrame#cardFrame,
+QFrame#panelFrame {
+    background: #FFFFFF;
+    border: 1px solid #D8E4F2;
+    border-radius: 12px;
+}
+
+QGroupBox {
+    background: #FFFFFF;
+    border: 1px solid #D8E4F2;
+    border-radius: 12px;
+    margin-top: 12px;
+    padding-top: 10px;
+}
+
+QGroupBox::title {
+    subcontrol-origin: margin;
+    left: 12px;
+    padding: 0 4px;
+    color: #2D5F9A;
+    font-weight: 700;
+}
+
+QLabel {
+    background: transparent;
+    color: #24364B;
+}
+
+QLabel#label_title_patient,
+QLabel#label_title_doctor,
+QLabel#label_title_room,
+QLabel#label_title_time,
+QLabel#label_title_plan,
+QLabel#label_title_flow,
+QLabel#label_title_status,
+QLabel#label_title_ops,
+QLabel#label_title_bed,
+QLabel#label_preview_title {
+    color: #2D5F9A;
+    font-weight: 700;
+    font-size: 16px;
+}
+
+QLabel#label_10 {
+    color: #2D5F9A;
+    font-weight: 600;
+}
+
+QLabel#label_30 {
+    color: #3F7FE8;
+    font-size: 22px;
+    font-weight: 700;
+}
+
+QPushButton {
+    background: #F4F8FE;
+    border: 1px solid #BFD2EA;
+    border-radius: 10px;
+    padding: 8px 16px;
+    min-height: 24px;
+    color: #2B4E78;
+    font-weight: 600;
+}
+
+QPushButton:hover {
+    background: #EAF2FD;
+    border: 1px solid #9EBDE4;
+}
+
+QPushButton:pressed {
+    background: #DCEBFC;
+}
+
+QPushButton:disabled {
+    background: #F0F0F0;
+    color: #999999;
+    border: 1px solid #DDDDDD;
+}
+
+QPushButton#beamApply_pushButton:enabled,
+QPushButton#confirmPlan_pushButton:enabled {
+    background: #3F7FE8;
+    color: #FFFFFF;
+    border: 1px solid #2F6FD7;
+}
+
+QPushButton#beamApply_pushButton:hover,
+QPushButton#confirmPlan_pushButton:hover {
+    background: #4C8AF0;
+}
+
+QPushButton#logout_pushButton {
+    color: #D94C4C;
+}
+
+QComboBox,
+QLineEdit,
+QTextEdit,
+QPlainTextEdit,
+QTableWidget,
+QTableView,
+QTabWidget::pane {
+    background: #FFFFFF;
+    border: 1px solid #D4E0EF;
+    border-radius: 10px;
+    color: #24364B;
+}
+
+QComboBox,
+QLineEdit {
+    min-height: 34px;
+    padding: 2px 10px;
+}
+
+QLineEdit:focus,
+QTextEdit:focus,
+QPlainTextEdit:focus,
+QComboBox:hover {
+    border: 1px solid #4A84E8;
+}
+
+QComboBox::drop-down {
+    border: none;
+    width: 24px;
+}
+
+QComboBox QAbstractItemView {
+    background: #FFFFFF;
+    border: 1px solid #D4E0EF;
+    selection-background-color: #E6F0FF;
+    selection-color: #1E3550;
+}
+
+QTableWidget,
+QTableView {
+    gridline-color: #E0E8F2;
+    selection-background-color: #E6F0FF;
+    selection-color: #1E3550;
+    alternate-background-color: #F8FBFF;
+}
+
+QTableWidget::item,
+QTableView::item {
+    padding: 4px;
+}
+
+QHeaderView::section {
+    background: #EDF4FD;
+    color: #31577F;
+    border: none;
+    border-right: 1px solid #D8E4F2;
+    border-bottom: 1px solid #D8E4F2;
+    padding: 8px;
+    font-weight: 600;
+}
+
+QTableCornerButton::section {
+    background: #EDF4FD;
+    border: 1px solid #D8E4F2;
+}
+
+QTabBar::tab {
+    background: #EDF4FD;
+    border: 1px solid #D0DEEF;
+    padding: 8px 18px;
+    min-width: 88px;
+    border-top-left-radius: 10px;
+    border-top-right-radius: 10px;
+    margin-right: 4px;
+    color: #3C5F86;
+}
+
+QTabBar::tab:selected {
+    background: #FFFFFF;
+    color: #2A4F78;
+    font-weight: 700;
+}
+
+QProgressBar {
+    border: 1px solid #D4E0EF;
+    border-radius: 8px;
+    background: #F7FAFE;
+    text-align: right;
+}
+
+QProgressBar::chunk {
+    background: #4A84E8;
+    border-radius: 6px;
+}
+
+QStatusBar {
+    background: #EAF2FB;
+    color: #35506E;
+    border-top: 1px solid #C9D9EC;
+}
+
+QScrollBar:vertical {
+    background: #F3F7FC;
+    width: 12px;
+    border: 1px solid #D0DEEF;
+}
+
+QScrollBar::handle:vertical {
+    background: #BFD2EA;
+    min-height: 24px;
+    border-radius: 4px;
+}
+
+QScrollBar:horizontal {
+    background: #F3F7FC;
+    height: 12px;
+    border: 1px solid #D0DEEF;
+}
+
+QScrollBar::handle:horizontal {
+    background: #BFD2EA;
+    min-width: 24px;
+    border-radius: 4px;
+}
+
+QDialog#LoginDialog {
+    background: #F3F7FC;
+}
+
+QDialog#LoginDialog QLabel#label_title {
+    color: #1E4F86;
+    font-size: 20px;
+    font-weight: 700;
+}
+
+QDialog#LoginDialog QLabel#label_subtitle {
+    color: #6B7C90;
+    font-size: 13px;
+}
+
+QDialog#LoginDialog QLabel#label_username,
+QDialog#LoginDialog QLabel#label_password {
+    color: #31577F;
+    font-weight: 600;
+}
+
+QDialog#LoginDialog QLineEdit {
+    background: #FFFFFF;
+    border: 1px solid #CBD9EA;
+    border-radius: 8px;
+    padding: 4px 10px;
+    selection-background-color: #3F7FE8;
+}
+
+QDialog#LoginDialog QLineEdit:focus {
+    border: 1px solid #3F7FE8;
+}
+
+QDialog#LoginDialog QCheckBox,
+QDialog#LoginDialog QRadioButton {
+    color: #24364B;
+    spacing: 6px;
+}
+
+QDialog#LoginDialog QPushButton#pb_show_passwd {
+    background: #F4F8FE;
+    border: 1px solid #BFD2EA;
+    border-radius: 8px;
+    padding: 0px;
+}
+
+QDialog#LoginDialog QPushButton#pb_show_passwd:hover {
+    background: #EAF2FD;
+    border: 1px solid #9EBDE4;
+}
+
+QDialog#LoginDialog QPushButton#pushButton_login {
+        border-radius: 9px;
+    font-weight: 700;
+background: #3F7FE8;
+    color: #FFFFFF;
+    border: 1px solid #2F6FD7;
+}
+
+QDialog#LoginDialog QPushButton#pushButton_login:hover {
+    background: #4C8AF0;
+}
+
+QDialog#LoginDialog QPushButton#pushButton_cancel {
+        border-radius: 9px;
+    font-weight: 700;
+background: #FFFFFF;
+    color: #2B4E78;
+    border: 1px solid #BFD2EA;
+}
+
+QDialog#LoginDialog QPushButton#pushButton_cancel:hover {
+    background: #EAF2FD;
+}
+
+
+/* Treatment client appearance. */
+QMainWindow#TreatmentWindow QGroupBox { margin-top: 4px; }
+QLabel[tcsStyle="dispatchMonitor"] { background: #F6FAFF; color: #315B83; border: 1px solid #D8E7F7; padding: 6px; font-size: 12px; }
+QLabel[tcsStyle="dispatchMonitor"][statusTone="4"] { background: #FFF0F0; color: #B42318; border: 1px solid #B42318; }
+QLabel[tcsStyle="statusItemStyle"] {background: #F4F8FE;border: 1px solid #D4E2F2;border-radius: 7px;color: #1E4E82;font-weight: 700;padding: 3px 12px;}
+
+QLabel[tcsStyle="positionValueStyle"] {background: #EAF3FF;border: 1px solid #D2E2F4;border-radius: 6px;color: #0E2847;padding: 0 8px;}
+
+QLineEdit[tcsStyle="positionEditStyle"] {background: #FFFFFF;border: 1px solid #D2E2F4;border-radius: 6px;color: #0E2847;padding: 0 8px;selection-background-color: #2F80ED;}QLineEdit[tcsStyle="positionEditStyle"]:focus {border: 1px solid #7FB2F0;}
+
+QWidget[tcsStyle="planNameStyle"] {color: #4A5F78; font-weight: 700;}
+
+QLabel[tcsStyle="planValueStyle"] {background: #F6FAFF;border: 1px solid #D8E7F7;border-radius: 6px;color: #0E3156;font-weight: 700;padding: 6px 10px;}
+
+QLabel[tcsStyle="idleStyle"] {background: #F7FAFE;border: 1px solid #D5E4F4;border-radius: 8px;color: #315B83;font-weight: 650;}
+
+QLabel[tcsStyle="activeStyle"] {background: #E8F8F0;border: 2px solid #30B27A;border-radius: 8px;color: #0B6B45;font-weight: 800;}
+
+QWidget[tcsStyle="treatmentStyle8"] {font-weight: 700; color: #004A88;}
+
+QLabel[tcsStyle="treatmentStyle9"] {color: #4A5F78;font-weight: 700;background: transparent;}
+
+QLabel[tcsStyle="treatmentStyle10"] {color: #3D7BEA;font-size: 22px;font-weight: 800;background: transparent;}
+
+QWidget[tcsStyle="treatmentStyle11"] {color: #4A5F78; font-weight: 700; background: transparent;}
+
+QWidget[tcsStyle="treatmentStyle12"] {color: #005BAC; font-weight: 700; background: transparent;}
+
+QLabel[tcsStyle="treatmentStyle13"] { font-size: 18px; font-weight: 700;padding: 4px 6px; }
+
+QLabel[tcsStyle="treatmentStyle14"] { font-size: 20px; font-weight: 700; }
+
+QLabel[tcsStyle="treatmentStyle15"] { color: #003B73; font-size: 12px; font-weight: 800; background: transparent; }
+
+QLabel[tcsStyle="treatmentStyle16"] { color: #003B73; font-size: 12px; font-weight: 800; background: transparent; }
+
+QWidget[tcsStyle="treatmentStyle17"] {font-weight: 700; color: #004A88;}
+
+QWidget[tcsStyle="treatmentStyle18"] {font-weight: 700; color: #0B3F73;}
+
+QLabel[tcsStyle="treatmentStyle19"] {background: #F7FAFE;border: 1px solid #C9DCF3;border-radius: 8px;color: #123E66;padding: 7px 10px;}
+
+QWidget#bedPositionPanel[tcsStyle="treatmentStyle20"] {background: #F6FAFF;border: 1px solid #D8E7F7;border-radius: 4px;}
+
+SpotMapWidget#spotMapWidget {
+    background: #F5F9FE;
+    color: #526A82;
+    selection-background-color: #2F80ED;
+    selection-color: #FFFFFF;
+}
+
+QLabel[tcsStyle="treatmentStyle21"] { font-size: 18px; font-weight: 700;color: #163E60; background: #EDF5FC;border: 1px solid #9BBAD1; border-left: 4px solid #245C86;border-radius: 4px; padding: 6px 10px; }
+
+QLabel[tcsStyle="treatmentStyle22"] {font-size: 17px;font-weight: 800;color: #003B73;}
+
+QLabel[tcsStyle="treatmentStyle23"] {color: #173B5F;font-size: 13px;}
+
+QLabel[tcsStyle="treatmentStyle24"] {color: #0B3F73;font-weight: 700;}
+
+QPlainTextEdit[tcsStyle="treatmentStyle25"] {background: #F7FAFE;border: 1px solid #C9D9EA;border-radius: 8px;color: #0E2847;font-family: Consolas, 'Courier New', monospace;font-size: 13px;}
+
+QWidget[tcsStyle="treatmentStyle26"] {font-size: 17px; font-weight: 700; color: #003B73;}
+
+QWidget[tcsStyle="treatmentStyle27"] {color: #5A6B7E; font-weight: 600;}
+
+QLabel[tcsStyle="treatmentStyle28"] {background: #F6FAFF;border: 1px solid #D8E7F7;border-radius: 6px;padding: 5px 8px;color: #0E3156;font-weight: 600;}
+
+QWidget[tcsStyle="treatmentStyle29"] {font-size: 16px; font-weight: 700; color: #003B73;}
+
+QGroupBox[tcsStyle="treatmentStyle30"] {font-weight: 700;color: #004A88;border: 1px solid #C9D9EA;border-radius: 8px;margin-top: 10px;padding: 12px 10px 10px 10px;background: #FFFFFF;}QGroupBox[tcsStyle="treatmentStyle30"]::title {subcontrol-origin: margin;left: 10px;padding: 0 4px;}
+
+QWidget[tcsStyle="treatmentStyle31"] {color: #5A6B7E; font-weight: 600;}
+
+QLabel[tcsStyle="treatmentStyle32"] {color: #0E3156;font-weight: 600;background: #F6FAFF;border: 1px solid #D8E7F7;border-radius: 6px;padding: 5px 8px;}
+
+QPushButton[tcsStyle="treatmentStyle33"] {background: #EAF3FF;border: 1px solid #BFD6F4;border-radius: 6px;color: #005BAC;font-weight: 700;}QPushButton[tcsStyle="treatmentStyle33"]:hover {background: #DDEEFF;}
+
+QPlainTextEdit[tcsStyle="treatmentStyle34"] {background: #F7FAFE;border: 1px solid #C9D9EA;border-radius: 8px;color: #0E2847;font-family: Consolas, 'Courier New', monospace;font-size: 13px;}
+
+QPushButton[tcsStyle="primaryActionButtonStyle"] {background: #3F7FE8;color: #FFFFFF;border: 1px solid #2F6FD7;border-radius: 10px;padding: 8px 16px;font-weight: 700;}QPushButton[tcsStyle="primaryActionButtonStyle"]:hover {background: #4C8AF0;}QPushButton[tcsStyle="primaryActionButtonStyle"]:pressed {background: #2F6FD7;}QPushButton[tcsStyle="primaryActionButtonStyle"]:disabled {background: #F0F0F0;color: #999999;border: 1px solid #DDDDDD;}
+
+QPushButton[tcsStyle="secondaryActionButtonStyle"] {background: #F4F8FE;color: #2B4E78;border: 1px solid #BFD2EA;border-radius: 10px;padding: 8px 16px;font-weight: 600;}QPushButton[tcsStyle="secondaryActionButtonStyle"]:hover {background: #EAF2FD;border: 1px solid #9EBDE4;}
+
+QWidget#label_icon_patient {image: url(:/icons/icons/patient.svg);}
+
+QWidget#label_icon_prescriptionDose {color: #2F80ED; font-weight: 800;}
+
+QWidget#labelTopPrescriptionDetail {color: #5B6B7A;}
+
+QWidget#label_icon_doctor {image: url(:/icons/icons/therapist_new.svg);}
+
+QWidget#label_icon_room {image: url(:/icons/icons/room.svg);}
+
+QWidget#label_icon_time {image: url(:/icons/icons/time.svg);}
+
+QWidget#label_icon_plan {image: url(:/icons/icons/schedule.svg);}
+
+QWidget#label_icon_flow {image: url(:/icons/icons/schedule.svg);}
+
+QLabel#labelCurrentTreatmentAction {
+    color: #0E4F83;
+    background: #F3F8FE;
+    border: 1px solid #C9DCF2;
+    border-radius: 4px;
+    padding: 5px 10px;
+    font-size: 14px;
+    font-weight: 400;
+}
+
+QGroupBox#groupBoxLiveDose { background: #FFFFFF; border: 2px solid #7B9DAE; border-radius: 6px; margin-top: 0; padding-top: 0; }
+QLabel#labelLiveDoseTitle { color: #234C60; font-size: 17px; font-weight: 700; }
+QLabel[tcsStyle="workflowAttention"] { color: #805008; background: #FFF7E8; border: 1px solid #E4BC74; border-left: 4px solid #C38923; border-radius: 4px; padding: 7px 10px; font-weight: 600; }
+QLabel[tcsStyle="workflowAttention"][statusTone="4"] { color: #A5222A; background: #FFF0F1; border-color: #E4A3A7; border-left-color: #C4313D; }
+QGroupBox#groupBoxLiveDose QLabel[tcsStyle="beamMetricCaption"] { color: #526879; background: transparent; border: none; padding: 0; font-size: 12px; font-weight: 600; }
+QGroupBox#groupBoxLiveDose QLabel#labelDoseDeliveryProgressValue,
+QGroupBox#groupBoxLiveDose QLabel#labelBeamDoseRateValue,
+QGroupBox#groupBoxLiveDose QLabel#labelLayerProgressValue { color: #173C50; background: transparent; border: none; padding: 0; font-size: 20px; font-weight: 700; }
+QGroupBox#groupBoxLiveDose QLabel#labelBeamDeliveryState { color: #526879; background: transparent; font-size: 12px; }
+QGroupBox#groupBoxLiveDose QLabel#labelDoseDeviation { color: #526879; background: transparent; border: none; padding: 2px 0; font-weight: 400; }
+QGroupBox#groupBoxLiveDose QLabel[tcsStyle="dispatchMonitor"] { color: #526879; background: #F5F8FA; border: 1px solid #DEE7ED; font-size: 16px; padding: 6px 8px; }
+QToolButton#buttonBeamTelemetryDetails { color: #355A74; background: transparent; border: none; padding: 4px 0; }
+QToolButton#buttonBeamTelemetryDetails:hover { color: #135CA4; }
+QTabWidget#treatmentSupportTabs::pane { border: 1px solid #D8E4F2; background: #FFFFFF; }
+
+QWidget#label_icon_ops {image: url(:/icons/icons/record.svg);}
+
+QLabel#label_11 { background: #F7FAFE; border: 1px solid #C9DCF3; border-radius: 8px; color: #123E66; padding: 7px 10px; }
+
+QLabel#beamRoomStatusTitle { color: #0B3F73; font-weight: 700; padding-left: 2px; }
+
+QLabel#labelBeamWaitTitle { color: #4A5F78; font-weight: 700; background: transparent; }
+
+QLabel#label_30 { color: #3D7BEA; font-size: 22px; font-weight: 800; background: transparent; }
+
+QWidget#label_icon_status {image: url(:/icons/icons/record.svg);}
+
+
+
+
+
+QLabel#labelDosePanelTitle { color: #004A88; font-size: 16px; font-weight: 700; background: transparent; }
+
+QLabel#labelDosePrescriptionName { color: #4A5F78; font-size: 12px; font-weight: 700; background: transparent; }
+
+QLabel#labelPrescriptionDose { background: #F6FAFF; border: 1px solid #CFE1F4; border-radius: 8px; padding: 8px 10px; color: #0E3764; font-weight: 700; }
+
+QLabel#labelDoseFractionName { color: #4A5F78; font-size: 12px; font-weight: 700; background: transparent; }
+
+QLabel#labelFractionDose { background: #F6FAFF; border: 1px solid #CFE1F4; border-radius: 8px; padding: 8px 10px; color: #0E3764; font-weight: 700; }
+
+QLabel#labelDoseCurrentFractionName { color: #4A5F78; font-size: 12px; font-weight: 700; background: transparent; }
+
+QLabel#labelCurrentFractionDose { background: #F6FAFF; border: 1px solid #CFE1F4; border-radius: 8px; padding: 8px 10px; color: #0E3764; font-weight: 700; }
+
+QLabel#labelDoseCompletedName { color: #4A5F78; font-size: 12px; font-weight: 700; background: transparent; }
+
+QLabel#labelCompletedDose { background: #F6FAFF; border: 1px solid #CFE1F4; border-radius: 8px; padding: 8px 10px; color: #0E3764; font-weight: 700; }
+
+QLabel#labelDoseBeamMuName { color: #4A5F78; font-size: 12px; font-weight: 700; background: transparent; }
+
+QProgressBar#progressBarBeamMeterset { background: #F6FAFF; border: 1px solid #CFE1F4; border-radius: 8px; color: #0E3764; font-weight: 700; text-align: center; }QProgressBar#progressBarBeamMeterset::chunk { background: #3D7BEA; border-radius: 7px; }
+
+QLabel#labelBeamMuDose { background: #F6FAFF; border: 1px solid #CFE1F4; border-radius: 8px; padding: 8px 10px; color: #0E3764; font-weight: 700; }
+
+QLabel#labelDoseDeviationName { color: #4A5F78; font-size: 12px; font-weight: 700; background: transparent; }
+
+QLabel#labelDoseDeviation { background: #F6FAFF; border: 1px solid #CFE1F4; border-radius: 8px; padding: 8px 10px; color: #0E3764; font-weight: 700; }
+
+QLabel#labelLayerProgressName { color: #4A5F78; font-size: 12px; font-weight: 700; background: transparent; }
+
+QProgressBar#progressBarLayerProgress { background: #F6FAFF; border: 1px solid #CFE1F4; border-radius: 8px; color: #0E3764; font-weight: 700; text-align: center; }QProgressBar#progressBarLayerProgress::chunk { background: #3D7BEA; border-radius: 7px; }
+
+QLabel#labelLayerProgressValue { background: #F6FAFF; border: 1px solid #CFE1F4; border-radius: 8px; padding: 5px 8px; color: #0E3764; font-weight: 700; }
+
+QLabel#labelBeamDoseInfoName { color: #4A5F78; font-size: 12px; font-weight: 700; background: transparent; }
+
+QLabel#labelBeamDoseInfo { background: #F6FAFF; border: 1px solid #CFE1F4; border-radius: 8px; padding: 8px 10px; color: #0E3764; font-weight: 700; }
+
+QWidget#label_icon_bed {image: url(:/icons/icons/bed.svg);}
+
+QLabel#labelDoseDeliveryProgressName { color: #4A5F78; font-size: 12px; font-weight: 700; background: transparent; }
+
+QProgressBar#progressBarDoseDelivery { background: #F6FAFF; border: 1px solid #CFE1F4; border-radius: 8px; color: #0E3764; font-weight: 700; text-align: center; }QProgressBar#progressBarDoseDelivery::chunk { background: #20A978; border-radius: 7px; }
+
+QLabel#labelDoseDeliveryProgressValue { background: #F6FAFF; border: 1px solid #CFE1F4; border-radius: 8px; padding: 5px 8px; color: #0E3764; font-weight: 700; }
+QLabel[tcsStyle="statusTitle"] { font-size: 16px; font-weight: 700; color: #2D5F9A; background: transparent; border: none; }
+
+QLabel[tcsStyle="deviceStatus"][statusTone="0"] { background: #F1F4F7; color: #8A99A8; border: 1px solid #8A99A8; border-radius: 5px; font-weight: 700; padding: 3px 8px; }
+QLabel[tcsStyle="statusDot"][statusTone="0"] { background: #8A99A8; border: 2px solid #F1F4F7; border-radius: 7px; }
+
+QLabel[tcsStyle="deviceStatus"][statusTone="1"] { background: #EDF4FF; color: #3E7FE8; border: 1px solid #3E7FE8; border-radius: 5px; font-weight: 700; padding: 3px 8px; }
+QLabel[tcsStyle="statusDot"][statusTone="1"] { background: #3E7FE8; border: 2px solid #EDF4FF; border-radius: 7px; }
+
+QLabel[tcsStyle="deviceStatus"][statusTone="2"] { background: #EAF8F1; color: #24AA70; border: 1px solid #24AA70; border-radius: 5px; font-weight: 700; padding: 3px 8px; }
+QLabel[tcsStyle="statusDot"][statusTone="2"] { background: #24AA70; border: 2px solid #EAF8F1; border-radius: 7px; }
+
+QLabel[tcsStyle="deviceStatus"][statusTone="3"] { background: #FFF6E5; color: #D58A18; border: 1px solid #D58A18; border-radius: 5px; font-weight: 700; padding: 3px 8px; }
+QLabel[tcsStyle="statusDot"][statusTone="3"] { background: #D58A18; border: 2px solid #FFF6E5; border-radius: 7px; }
+
+QLabel[tcsStyle="deviceStatus"][statusTone="4"] { background: #FFF0F0; color: #D9534F; border: 1px solid #D9534F; border-radius: 5px; font-weight: 700; padding: 3px 8px; }
+QLabel[tcsStyle="statusDot"][statusTone="4"] { background: #D9534F; border: 2px solid #FFF0F0; border-radius: 7px; }
+/* Engineer workspace: scoped to the maintenance client only. */
+QMainWindow#MaintenanceWindow, QMainWindow#MaintenanceWindow QWidget { background: #F3F5F7; color: #25313B; font-size: 14px; }
+QMainWindow#MaintenanceWindow QLabel { background: transparent; border: none; }
+QMainWindow#MaintenanceWindow QLabel[engRole="title"] { color: #126B68; font-size: 20px; font-weight: 700; padding: 4px 12px 4px 0; }
+QMainWindow#MaintenanceWindow QLabel[engRole="section"] { font-size: 15px; font-weight: 700; padding: 6px 0; }
+QMainWindow#MaintenanceWindow QLabel[engRole="notice"] { background: #EAF0F2; border: 1px solid #B7C8CE; border-radius: 4px; padding: 8px; }
+QMainWindow#MaintenanceWindow QLabel[engTone="good"] { color: #14654B; }
+QMainWindow#MaintenanceWindow QLabel[engTone="unknown"] { color: #52606A; }
+QMainWindow#MaintenanceWindow QLabel[engTone="fault"] { color: #A62C3B; }
+QMainWindow#MaintenanceWindow QLabel[engTone="warning"] { color: #805312; }
+QMainWindow#MaintenanceWindow QLabel[engRole="notice"][engTone="warning"] { background: #FFF5DC; border-color: #D8B568; color: #674608; }
+QMainWindow#MaintenanceWindow QLineEdit, QMainWindow#MaintenanceWindow QComboBox,
+QMainWindow#MaintenanceWindow QSpinBox, QMainWindow#MaintenanceWindow QDoubleSpinBox { background: #FFFFFF; color: #25313B; border: 1px solid #AAB9C3; border-radius: 4px; min-height: 28px; padding: 3px 8px; }
+QMainWindow#MaintenanceWindow QLineEdit:read-only { background: #E8EEF1; color: #465762; }
+QMainWindow#MaintenanceWindow QPlainTextEdit { background: #FFFFFF; color: #25313B; border: 1px solid #BAC6CE; border-radius: 4px; padding: 6px; font-family: "Consolas", "Microsoft YaHei"; font-size: 13px; selection-background-color: #D0E8E4; selection-color: #183F3D; }
+QMainWindow#MaintenanceWindow QTreeWidget, QMainWindow#MaintenanceWindow QTableWidget { background: #FFFFFF; color: #25313B; border: 1px solid #BAC6CE; border-radius: 4px; alternate-background-color: #F2F5F6; selection-background-color: #D0E8E4; selection-color: #183F3D; }
+QMainWindow#MaintenanceWindow QTreeWidget::item { min-height: 30px; padding: 2px 5px; }
+QMainWindow#MaintenanceWindow QHeaderView::section { background: #E7EDF0; color: #354C59; border: none; border-bottom: 1px solid #BAC6CE; padding: 7px; font-weight: 600; }
+QMainWindow#MaintenanceWindow QTabWidget::pane { background: #F3F5F7; border: 1px solid #BAC6CE; border-radius: 4px; }
+QMainWindow#MaintenanceWindow QTabBar::tab { background: #E7EDF0; color: #435662; border: 1px solid #BAC6CE; border-bottom: none; border-top-left-radius: 4px; border-top-right-radius: 4px; padding: 9px 20px; }
+QMainWindow#MaintenanceWindow QTabBar::tab:selected { background: #FFFFFF; color: #126B68; font-weight: 700; }
+QMainWindow#MaintenanceWindow QPushButton { background: #FFFFFF; color: #334F5C; border: 1px solid #A7BAC4; border-radius: 4px; padding: 5px 12px; min-height: 28px; }
+QMainWindow#MaintenanceWindow QPushButton:hover { background: #E9F3F0; border-color: #3D8077; }
+QMainWindow#MaintenanceWindow QPushButton[engRole="primary"]:enabled { background: #146D65; color: #FFFFFF; border-color: #146D65; }
+QMainWindow#MaintenanceWindow QPushButton[engRole="danger"]:enabled { background: #FFF0F0; color: #A62C3B; border-color: #C9939C; }
+QMainWindow#MaintenanceWindow QPushButton:disabled { background: #E7ECEF; color: #79858E; border-color: #C4CDD3; }
+QMainWindow#MaintenanceWindow QCheckBox { spacing: 8px; min-height: 28px; }
+QMainWindow#MaintenanceWindow QSplitter::handle { background: #DCE4E8; }
+QMainWindow#MaintenanceWindow QScrollArea { border: none; }
+QMainWindow#MaintenanceWindow QToolButton#engineerDebugTools { background: #FFFFFF; color: #334F5C; border: 1px solid #A7BAC4; border-radius: 4px; padding: 7px 12px; min-height: 26px; }
+QMainWindow#MaintenanceWindow QToolButton#engineerDebugTools:hover { background: #E9F3F0; border-color: #3D8077; }
+QMainWindow#MaintenanceWindow QMenu { background: #FFFFFF; color: #25313B; border: 1px solid #BAC6CE; padding: 4px; }
+QMainWindow#MaintenanceWindow QMenu::item { padding: 8px 24px 8px 12px; }
+QMainWindow#MaintenanceWindow QMenu::item:selected { background: #D0E8E4; color: #183F3D; }
+QMainWindow#MaintenanceWindow QDockWidget#engineerDebugDock { background: #F3F5F7; color: #25313B; }
+QMainWindow#MaintenanceWindow QDockWidget#engineerDebugDock::title { background: #E7EDF0; padding: 7px; }
+QMainWindow#MaintenanceWindow QWidget[engRole="surface"] { background: #FFFFFF; border: 1px solid #CDD7DE; border-radius: 6px; }
+QMainWindow#MaintenanceWindow QWidget[engRole="controlSection"] { background: #F6F8FA; border: none; border-bottom: 1px solid #E0E6EA; }
+QMainWindow#MaintenanceWindow QWidget[engRole="metric"] { background: #F6F8FA; border: none; border-bottom: 1px solid #DCE4E9; }
+QMainWindow#MaintenanceWindow QLabel[engRole="operationTitle"] { color: #25313B; font-size: 17px; font-weight: 700; padding: 6px 0; }
+QMainWindow#MaintenanceWindow QLabel[engRole="serviceTag"] { color: #316EA8; background: #EEF3F8; border: 1px solid #CDD9E6; border-radius: 4px; padding: 5px 10px; }
+QMainWindow#MaintenanceWindow QLabel[engRole="metricValue"] { font-size: 15px; font-weight: 600; }
+QMainWindow#MaintenanceWindow QLabel[engRole="muted"] { color: #657581; font-size: 13px; }
+QMainWindow#MaintenanceWindow QLabel[engRole="executionBadge"] { background: #EEF2F5; border: 1px solid #CBD5DD; border-radius: 4px; padding: 5px 10px; }
+QMainWindow#MaintenanceWindow QLabel[engRole="executionStep"] { padding: 9px 0; border-bottom: 1px solid #E4E9ED; }
+QMainWindow#MaintenanceWindow QLabel[engRole="executionMessage"] { padding: 8px; }
+QMainWindow#MaintenanceWindow QLabel[engRole="executionMessage"][engTone="fault"] { background: #FFF0F0; border: 1px solid #E4B8BE; border-radius: 4px; }
+/* QA execution workspace */
+QMainWindow#QaWindow { background: #F3F5F7; }
+QMainWindow#QaWindow QWidget#centralwidget { background: #F3F5F7; }
+QMainWindow#QaWindow QWidget[qaRole="scrollContent"] { background: #F3F5F7; border: none; }
+QMainWindow#QaWindow QWidget[qaRole="field"] { background: transparent; border: none; }
+QMainWindow#QaWindow QStatusBar { background: #F3F5F7; color: #657581; border: none; }
+QMainWindow#QaWindow QLabel { background: transparent; color: #25313B; font-size: 14px; }
+QMainWindow#QaWindow QLabel[qaRole="mode"] { color: #126B68; font-size: 20px; font-weight: 700; padding-right: 12px; }
+QMainWindow#QaWindow QWidget[qaRole="panel"] { background: #FFFFFF; border: 1px solid #CDD7DE; border-radius: 6px; }
+QMainWindow#QaWindow QWidget[qaRole="notice"] { background: #FFF5DC; border: 1px solid #D8B568; border-radius: 4px; }
+QMainWindow#QaWindow QWidget[qaRole="toolbar"] { background: #FFFFFF; border: none; border-bottom: 1px solid #CDD7DE; }
+QMainWindow#QaWindow QRadioButton { color: #435662; background: transparent; padding: 6px 12px; spacing: 8px; border: none; }
+QMainWindow#QaWindow QRadioButton:checked { color: #126B68; background: #EAF3F2; border-bottom: 2px solid #47867F; font-weight: 700; }
+QMainWindow#QaWindow QLabel[qaRole="section"] { color: #25313B; font-size: 16px; font-weight: 700; padding: 4px 0; }
+QMainWindow#QaWindow QLabel[qaRole="muted"] { color: #657581; font-size: 13px; }
+QMainWindow#QaWindow QLabel[qaRole="value"] { background: #F2F5F6; padding: 6px; border-radius: 4px; }
+QMainWindow#QaWindow QLabel[qaRole="state"] { background: #EAF3F2; color: #205A54; font-size: 16px; font-weight: 700; padding: 8px; }
+QMainWindow#QaWindow QLabel[qaRole="action"] { color: #435662; padding: 4px 0; }
+QMainWindow#QaWindow QLabel[qaRole="warning"] { color: #674608; font-weight: 600; }
+QMainWindow#QaWindow QLabel[qaRole="empty"] { background: #F6F8FA; color: #657581; padding: 16px; min-height: 180px; }
+QMainWindow#QaWindow QWidget[qaRole="step"] { background: #F2F5F6; border: none; border-radius: 4px; }
+QMainWindow#QaWindow QLabel[qaRole="stepNumber"] { color: #657581; font-size: 20px; font-weight: 700; }
+QMainWindow#QaWindow QLabel[qaRole="stepTitle"] { color: #435662; font-weight: 600; }
+QMainWindow#QaWindow QLabel[qaTone="unknown"] { color: #657581; }
+QMainWindow#QaWindow QLabel[qaTone="good"] { color: #167347; }
+QMainWindow#QaWindow QLabel[qaTone="warning"] { color: #946200; font-weight: 700; }
+QMainWindow#QaWindow QLabel[qaTone="fault"] { color: #B42318; font-weight: 700; }
+QMainWindow#QaWindow QPushButton { background: #EDF3F5; color: #284A55; border: 1px solid #BACAD0; border-radius: 4px; padding: 8px 10px; min-height: 22px; }
+QMainWindow#QaWindow QPushButton:hover:enabled { background: #DCEDEA; border-color: #47867F; }
+QMainWindow#QaWindow QPushButton:disabled { color: #778391; background: #E9EDF1; border-color: #CDD5DE; }
+QMainWindow#QaWindow QScrollArea { background: transparent; border: none; }
+QMainWindow#QaWindow QTableWidget { background: #FFFFFF; color: #25313B; border: 1px solid #CDD7DE; gridline-color: #DCE4E9; font-size: 13px; }
+QMainWindow#QaWindow QHeaderView::section { background: #EDF2F4; color: #435662; border: 1px solid #DCE4E9; padding: 6px; }
+QMainWindow#QaWindow QSplitter::handle { background: #F3F5F7; width: 8px; }
+
+/* Scoped to the treatment client; QA and maintenance keep their own styles. */
+QWidget#centralwidget[clinicalWorkspace="true"] { background: #EDF1F2; }
+QWidget#centralwidget[clinicalWorkspace="true"] QWidget { font-size: 18px; background: transparent; }
+QWidget#centralwidget[clinicalWorkspace="true"] QWidget[clinicalRole="surface"] { background: #FFFFFF; border: none; border-radius: 0; }
+QWidget#centralwidget[clinicalWorkspace="true"] QGroupBox { background: transparent; border: none; margin-top: 0; padding-top: 0; border-radius: 0; }
+QWidget#centralwidget[clinicalWorkspace="true"] QLabel { color: #263B43; background: transparent; }
+QWidget#centralwidget[clinicalWorkspace="true"] QLabel[clinicalRole="title"],
+QWidget#centralwidget[clinicalWorkspace="true"] QLabel[clinicalRole="section"],
+QWidget#centralwidget[clinicalWorkspace="true"] QLabel#label_title_patient,
+QWidget#centralwidget[clinicalWorkspace="true"] QLabel#label_title_plan,
+QWidget#centralwidget[clinicalWorkspace="true"] QLabel#label_title_ops,
+QWidget#centralwidget[clinicalWorkspace="true"] QLabel#label_preview_title { font-size: 20px; font-weight: 700; color: #263B43; }
+QWidget#centralwidget[clinicalWorkspace="true"] QLabel[clinicalRole="room"] { font-size: 26px; font-weight: 700; color: #146E58; }
+QWidget#centralwidget[clinicalWorkspace="true"] QLabel[clinicalRole="roomState"] { font-size: 18px; color: #526A74; }
+QWidget#centralwidget[clinicalWorkspace="true"] QLabel[clinicalRole="identity"] { font-size: 21px; font-weight: 700; padding: 3px 0; }
+QWidget#centralwidget[clinicalWorkspace="true"] QLabel[clinicalRole="muted"] { color: #64747D; font-size: 16px; }
+QWidget#centralwidget[clinicalWorkspace="true"] QLabel[clinicalRole="reserved"] { background: #F1F4F5; color: #61727B; padding: 9px; border-radius: 4px; }
+QWidget#centralwidget[clinicalWorkspace="true"] QLabel[clinicalRole="metric"] { font: 700 26px "Consolas"; padding: 8px 0; }
+QWidget#centralwidget[clinicalWorkspace="true"] QLabel[clinicalRole="empty"] { color: #64747D; font-size: 24px; }
+QWidget#centralwidget[clinicalWorkspace="true"] QLabel[clinicalRole="step"] { color: #64747D; background: #F1F4F5; border-bottom: 3px solid #D7E0E3; padding: 4px; font-size: 18px; }
+QWidget#centralwidget[clinicalWorkspace="true"] QLabel[clinicalRole="step"][phaseState="done"] { color: #12734E; border-bottom-color: #269563; }
+QWidget#centralwidget[clinicalWorkspace="true"] QLabel[clinicalRole="step"][phaseState="current"] { color: #075B79; background: #DCF3FA; border-bottom-color: #089BC4; font-size: 20px; font-weight: 700; }
+QWidget#centralwidget[clinicalWorkspace="true"] QLabel#labelCurrentTreatmentAction { font-size: 20px; color: #263B43; border: none; padding: 4px 0; background: transparent; }
+QWidget#centralwidget[clinicalWorkspace="true"] QLabel[tcsStyle="workflowAttention"] { font-size: 18px; color: #835505; background: #FFF5DB; border: 1px solid #E6C577; border-left: 4px solid #C58C17; padding: 8px; }
+QWidget#centralwidget[clinicalWorkspace="true"] QLabel[clinicalDevice="true"] { font-size: 20px; font-weight: 600; padding: 8px 10px; border-radius: 4px; }
+QWidget#centralwidget[clinicalWorkspace="true"] QLabel[clinicalDevice="true"][statusTone="0"] { background: #EFF2F3; color: #64747D; border: 1px solid #CCD7DC; }
+QWidget#centralwidget[clinicalWorkspace="true"] QLabel[clinicalDevice="true"][statusTone="1"] { background: #FFF0B5; color: #665000; border: 2px solid #D7AA23; }
+QWidget#centralwidget[clinicalWorkspace="true"] QLabel[clinicalDevice="true"][statusTone="2"] { background: #EAF8EF; color: #12734E; border: 1px solid #78B896; }
+QWidget#centralwidget[clinicalWorkspace="true"] QLabel[clinicalDevice="true"][statusTone="3"] { background: #FFF5DB; color: #835505; border: 1px solid #DAB364; }
+QWidget#centralwidget[clinicalWorkspace="true"] QLabel[clinicalDevice="true"][statusTone="4"] { background: #FFF0EC; color: #AD3026; border: 1px solid #DAA099; }
+QWidget#centralwidget[clinicalWorkspace="true"] QLabel[tcsStyle="positionValueStyle"],
+QWidget#centralwidget[clinicalWorkspace="true"] QLineEdit[tcsStyle="positionEditStyle"] { font: 18px "Consolas"; border-radius: 4px; background: #F1F5F6; color: #243B43; border: 1px solid #CAD7DC; padding: 0 8px; }
+QWidget#centralwidget[clinicalWorkspace="true"] QLineEdit[tcsStyle="positionEditStyle"] { background: #FFFFFF; }
+QWidget#centralwidget[clinicalWorkspace="true"] QLabel[tcsStyle="planValueStyle"] { background: #F4F6F7; color: #263B43; border: none; border-radius: 4px; padding: 6px; font-size: 17px; }
+QWidget#centralwidget[clinicalWorkspace="true"] QLabel#label_11 { color: #263B43; background: #F1F5F6; border: none; border-radius: 4px; padding: 10px; font-size: 19px; }
+QWidget#centralwidget[clinicalWorkspace="true"] QLabel#label_30 { color: #64747D; font-size: 20px; }
+QWidget#centralwidget[clinicalWorkspace="true"] QLabel#labelBeamDeliveryState { background: #F1F5F6; color: #526A74; font-size: 20px; font-weight: 700; border-radius: 4px; padding: 10px; }
+QWidget#centralwidget[clinicalWorkspace="true"] QLabel#labelBeamDeliveryState[clinicalBeamOn="true"] { background: #157A4E; color: #FFFFFF; border: 2px solid #0A5937; }
+QWidget#centralwidget[clinicalWorkspace="true"] QLabel#labelLiveDoseTitle { font-size: 20px; }
+QWidget#centralwidget[clinicalWorkspace="true"] QGroupBox#groupBoxLiveDose { border: none; background: #F5F8F8; padding: 6px; }
+QWidget#centralwidget[clinicalWorkspace="true"] QLabel[tcsStyle="beamMetricCaption"] { font-size: 16px; color: #526A74; }
+QWidget#centralwidget[clinicalWorkspace="true"] QLabel#labelDoseDeliveryProgressValue,
+QWidget#centralwidget[clinicalWorkspace="true"] QLabel#labelBeamDoseRateValue,
+QWidget#centralwidget[clinicalWorkspace="true"] QLabel#labelLayerProgressValue { font: 700 26px "Consolas"; color: #243B43; padding: 4px 0; }
+QWidget#centralwidget[clinicalWorkspace="true"] QProgressBar { border: 1px solid #C6D6D5; background: #EAF0F0; border-radius: 4px; color: #243B43; text-align: center; font-size: 17px; }
+QWidget#centralwidget[clinicalWorkspace="true"] QProgressBar::chunk { background: #75C49B; border-radius: 3px; }
+QWidget#centralwidget[clinicalWorkspace="true"] QPushButton { font-size: 18px; border-radius: 4px; padding: 4px 8px; }
+QWidget#centralwidget[clinicalWorkspace="true"] QPushButton[tcsStyle="primaryActionButtonStyle"]:enabled { color: #FFFFFF; background: #146E58; border: 1px solid #146E58; }
+QWidget#centralwidget[clinicalWorkspace="true"] QScrollArea { background: transparent; border: none; }
+QWidget#centralwidget[clinicalWorkspace="true"] QTabWidget::pane { background: #FFFFFF; border: none; border-top: 1px solid #D7E0E3; }
+QWidget#centralwidget[clinicalWorkspace="true"] QTabBar::tab { color: #526A74; background: #F1F5F6; border: none; padding: 8px 18px; font-size: 18px; }
+QWidget#centralwidget[clinicalWorkspace="true"] QTabBar::tab:selected { color: #146E58; background: #EAF8EF; border-bottom: 3px solid #269563; }
+QWidget#centralwidget[clinicalWorkspace="true"] QTreeWidget { border: none; background: #F5F8F8; color: #263B43; font-size: 17px; }
+QWidget#centralwidget[clinicalWorkspace="true"] QTreeWidget::item { padding: 5px; }
+QWidget#centralwidget[clinicalWorkspace="true"] QSplitter::handle { background: #EDF1F2; }
+QDialog#clinicalFaultDialog { background: #FFF5DB; border: 1px solid #DAB364; }
+QDialog#clinicalFaultDialog QLabel { color: #744D06; background: transparent; font-size: 20px; padding: 10px; }
+QDialog#clinicalFaultDialog QPlainTextEdit { color: #744D06; background: #FFF5DB; font-size: 20px; border: none; padding: 10px; }
+QWidget#centralwidget[clinicalWorkspace="true"] QTextEdit[clinicalRole="identifier"] { color: #263B43; background: #F4F6F7; border: none; padding: 6px; font-size: 17px; }
+QWidget#centralwidget[clinicalWorkspace="true"] QWidget#bedPositionPanel { background: #FFFFFF; border: 1px solid #CAD7DC; border-radius: 4px; }
+QWidget#centralwidget[clinicalWorkspace="true"] QLabel#labelDoseDeviation { font-size: 16px; }
+QWidget#centralwidget[clinicalWorkspace="true"] QWidget#widgetBeamCoreMetrics { background: #F1F5F6; }
+QWidget#centralwidget[clinicalWorkspace="true"] QLabel[tcsStyle="statusDot"][statusTone="0"] { background: #8A99A8; border: 2px solid #EFF2F3; }
+QWidget#centralwidget[clinicalWorkspace="true"] QLabel[tcsStyle="statusDot"][statusTone="1"] { background: #D7AA23; border: 2px solid #FFF5DB; }
+QWidget#centralwidget[clinicalWorkspace="true"] QLabel[tcsStyle="statusDot"][statusTone="2"] { background: #1EAB70; border: 2px solid #EAF8EF; }
+QWidget#centralwidget[clinicalWorkspace="true"] QLabel[tcsStyle="statusDot"][statusTone="3"] { background: #C58C17; border: 2px solid #FFF5DB; }
+QWidget#centralwidget[clinicalWorkspace="true"] QLabel[tcsStyle="statusDot"][statusTone="4"] { background: #CC4038; border: 2px solid #FFF0EC; }
+QWidget#centralwidget[clinicalWorkspace="true"] QPushButton:disabled { color: #88949A; background: #EDF0F1; border: 1px solid #CDD5D9; }
+QWidget#centralwidget[clinicalWorkspace="true"] QToolButton { color: #526A74; background: #F5F8F8; border: 1px solid #D7E0E3; padding: 4px; border-radius: 4px; }
+QWidget#centralwidget[clinicalWorkspace="true"] QLabel[tcsStyle="workflowAttention"][statusTone="4"] { color: #AD3026; background: #FFF0EC; border-color: #DAA099; border-left-color: #CC4038; }
+QMainWindow#TreatmentWindow QDialog QWidget { font-size: 18px; }
+QMainWindow#TreatmentWindow QDialog QTextEdit[clinicalRole="identifier"] { font-size: 17px; background: transparent; border: none; }
+QWidget#centralwidget[clinicalWorkspace="true"] QLabel[clinicalRole="planMetric"] { color: #243B43; font: 700 26px "Consolas"; padding: 4px 0 8px; }
+QWidget#centralwidget[clinicalWorkspace="true"] QTextEdit[clinicalRole="identifier"] { font-size: 18px; }
+QWidget#centralwidget[clinicalWorkspace="true"] QLabel#labelBeamDeliveryState { font-size: 24px; }
+QWidget#centralwidget[clinicalWorkspace="true"] QLabel[clinicalDevice="true"][clinicalCompact="true"] { font-size: 18px; padding: 4px 6px; }
+
+/* Compact treatment toolbar; room identity belongs to the operator section. */
+QWidget#centralwidget[clinicalWorkspace="true"] QWidget#clinicalHeader {
+    background: #FFFFFF; border: none; border-bottom: 1px solid #DCE4EE;
+    min-height: 56px; max-height: 72px;
+}
+QWidget#centralwidget[clinicalWorkspace="true"] QLabel#clinicalBrand {
+    color: #193450; font-size: 18px; font-weight: 700; padding: 0; margin: 0;
+}
+QWidget#centralwidget[clinicalWorkspace="true"] QWidget#clinicalHeader QPushButton {
+    font-size: 16px; min-height: 30px; padding: 2px 10px;
+    background: #FFFFFF; border: 1px solid #CEDBED; border-radius: 4px;
+}
+QWidget#centralwidget[clinicalWorkspace="true"] QWidget#clinicalHeader QPushButton:disabled {
+    color: #8B96A4; background: #F2F4F7; border-color: #DFE4EA;
+}
+QWidget#centralwidget[clinicalWorkspace="true"] QWidget#clinicalHeader QPushButton:hover:enabled {
+    background: #EDF4FF; border-color: #709BE2;
+}
+QWidget#centralwidget[clinicalWorkspace="true"] QLabel[clinicalOperatorRoom="true"] {
+    font-size: 18px; font-weight: 600; color: #264E73; padding: 4px 0;
+}
+
+/* Treatment left cards: a single existing icon heading per area. */
+QWidget#centralwidget[clinicalWorkspace="true"] QGroupBox#clinicalOperatorGroup,
+QWidget#centralwidget[clinicalWorkspace="true"] QGroupBox#clinicalPatientGroup,
+QWidget#centralwidget[clinicalWorkspace="true"] QGroupBox#clinicalPlanGroup {
+    background: #FFFFFF;
+    border: 1px solid #C9D9EA;
+    border-radius: 8px;
+    margin-top: 0;
+    padding: 4px;
+    color: #263B43;
+}
+QWidget#centralwidget[clinicalWorkspace="true"] QGroupBox#clinicalOperatorGroup QLabel[clinicalRole="groupHeading"] {
+    color: #1B4F83;
+    font-size: 20px;
+    font-weight: 700;
+    background: transparent;
+}
+QWidget#centralwidget[clinicalWorkspace="true"] QGroupBox#clinicalOperatorGroup QLabel[clinicalRole="groupHeadingIcon"] {
+    color: #3F7FE8;
+    font-size: 18px;
+}
+QWidget#centralwidget[clinicalWorkspace="true"] QGroupBox#groupBoxPatientInfo,
+QWidget#centralwidget[clinicalWorkspace="true"] QGroupBox#groupBoxPrescriptionDose,
+QWidget#centralwidget[clinicalWorkspace="true"] QGroupBox#groupBoxTreatmentPlan {
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    margin-top: 0;
+    padding-top: 0;
+}
+
+
+/* Reference-style treatment workspace -- reuses existing live data widgets.
+   WorkflowOverview geometry and paint colors are intentionally untouched. */
+QWidget#centralwidget[clinicalWorkspace="true"] QGroupBox#clinicalSafetyCard,
+QWidget#centralwidget[clinicalWorkspace="true"] QGroupBox#clinicalBedCard,
+QWidget#centralwidget[clinicalWorkspace="true"] QGroupBox#clinicalDoseCard,
+QWidget#centralwidget[clinicalWorkspace="true"] QGroupBox#clinicalQueueCard,
+QWidget#centralwidget[clinicalWorkspace="true"] QGroupBox#clinicalLogsCard {
+    background: #FFFFFF;
+    color: #1C4D78;
+    border: 1px solid #D9E5F2;
+    border-radius: 7px;
+    margin-top: 14px;
+    padding-top: 9px;
+    font-size: 16px;
+    font-weight: 700;
+}
+QWidget#centralwidget[clinicalWorkspace="true"] QGroupBox#clinicalSafetyCard::title,
+QWidget#centralwidget[clinicalWorkspace="true"] QGroupBox#clinicalBedCard::title,
+QWidget#centralwidget[clinicalWorkspace="true"] QGroupBox#clinicalDoseCard::title,
+QWidget#centralwidget[clinicalWorkspace="true"] QGroupBox#clinicalQueueCard::title,
+QWidget#centralwidget[clinicalWorkspace="true"] QGroupBox#clinicalLogsCard::title {
+    subcontrol-origin: margin;
+    left: 12px;
+    padding: 0 5px;
+    color: #1C4D78;
+    background: #FFFFFF;
+    font-weight: 700;
+    font-size: 16px;
+}
+QWidget#centralwidget[clinicalWorkspace="true"] QWidget[clinicalSafetyItem="true"] {
+    background: #F5F8FC;
+    border: 1px solid #D9E5F2;
+    border-radius: 5px;
+    padding: 4px;
+}
+QWidget#centralwidget[clinicalWorkspace="true"] QWidget#clinicalDeviceRail {
+    background: #FFFFFF;
+    border: 1px solid #D9E5F2;
+    border-radius: 7px;
+    padding: 5px;
+}
+QWidget#centralwidget[clinicalWorkspace="true"] QWidget#bedPositionPanel {
+    border: none;
+    background: transparent;
+}
+QWidget#centralwidget[clinicalWorkspace="true"] QGroupBox#clinicalDoseCard QGroupBox#groupBoxLiveDose,
+QWidget#centralwidget[clinicalWorkspace="true"] QGroupBox#clinicalQueueCard QGroupBox#groupBoxOperationQueue,
+QWidget#centralwidget[clinicalWorkspace="true"] QGroupBox#clinicalSafetyCard QGroupBox#groupBoxSystemStatus {
+    background: transparent;
+    border: none;
+    border-radius: 0px;
+    margin-top: 0px;
+    padding-top: 0px;
+}
+QWidget#centralwidget[clinicalWorkspace="true"] QLabel[clinicalRole="step"] {
+    font-size: 15px;
+    color: #6B7F91;
+    background: #F3F6FA;
+    border: 1px solid #D9E5F2;
+    border-bottom: 3px solid #D9E5F2;
+    border-radius: 5px;
+    padding: 5px;
+}
+QWidget#centralwidget[clinicalWorkspace="true"] QLabel[clinicalRole="step"][phaseState="done"] {
+    color: #18734E;
+    background: #EAF8F0;
+    border-color: #9FD5B6;
+    border-bottom: 3px solid #18734E;
+}
+QWidget#centralwidget[clinicalWorkspace="true"] QLabel[clinicalRole="step"][phaseState="current"] {
+    color: #1D64D3;
+    background: #E7F0FF;
+    border-color: #79A8F1;
+    border-bottom: 3px solid #1D64D3;
+    font-weight: 700;
+}
+QWidget#centralwidget[clinicalWorkspace="true"] QLabel#clinicalStageHeading {
+    font-size: 17px;
+    font-weight: 700;
+    color: #1C4D78;
+}
+QWidget#centralwidget[clinicalWorkspace="true"] QToolButton#clinicalDebugDetails {
+    background: #F5F8FC;
+    border: 1px solid #D9E5F2;
+    color: #1C4D78;
+    border-radius: 5px;
+    padding: 7px;
+}
+
+/* Treatment layout V2: top full-width safety and two lower columns. */
+QWidget#centralwidget[clinicalWorkspace="true"] QGroupBox#clinicalExecutionColumn,
+QWidget#centralwidget[clinicalWorkspace="true"] QGroupBox#clinicalDispatchFrame {
+    background: #FFFFFF;
+    color: #234F7D;
+    border: 1px solid #C8D8E9;
+    border-radius: 7px;
+    margin-top: 14px;
+    padding: 9px 0 0 0;
+    font-size: 17px;
+    font-weight: 700;
+}
+QWidget#centralwidget[clinicalWorkspace="true"] QGroupBox#clinicalExecutionColumn::title,
+QWidget#centralwidget[clinicalWorkspace="true"] QGroupBox#clinicalDispatchFrame::title {
+    subcontrol-origin: margin;
+    left: 12px;
+    padding: 0 6px;
+    color: #234F7D;
+    background: #FFFFFF;
+    font-size: 17px;
+    font-weight: 700;
+}
+QWidget#centralwidget[clinicalWorkspace="true"] QGroupBox#clinicalExecutionColumn QScrollArea#clinicalWorkflowScroll,
+QWidget#centralwidget[clinicalWorkspace="true"] QGroupBox#clinicalDispatchFrame QScrollArea#clinicalDispatchScroll {
+    background: #FFFFFF;
+    border: none;
+}
+QWidget#centralwidget[clinicalWorkspace="true"] QSplitter#clinicalLowerColumns::handle {
+    background: #F4F7FA;
+    width: 8px;
+}
+QWidget#centralwidget[clinicalWorkspace="true"] QGroupBox#clinicalSafetyCard {
+    background: #FFFFFF;
+    border: 1px solid #C8D8E9;
+}
+
+/* Draw the dose-delivery percentage as a circular MU progress gauge.
+   The shape and digits are rendered by CircularDoseProgressBar::paintEvent. */
+QWidget#centralwidget[clinicalWorkspace="true"] QProgressBar#progressBarDoseDelivery {
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    padding: 0;
+    min-width: 164px;
+    max-width: 164px;
+    min-height: 164px;
+    max-height: 164px;
+}
+
+/* Operator identity card: photo placeholder + name, employee no., room. */
+QWidget#centralwidget[clinicalWorkspace="true"] QGroupBox#clinicalOperatorGroup QLabel#clinicalOperatorPhoto {
+    background: #F4F8FD;
+    border: 1px dashed #ADC4DD;
+    border-radius: 6px;
+    color: #73899F;
+    font-size: 14px;
+    font-weight: 500;
+    padding: 4px;
+}
+QWidget#centralwidget[clinicalWorkspace="true"] QGroupBox#clinicalOperatorGroup QLabel[clinicalRole="operatorCaption"] {
+    color: #63798D;
+    background: transparent;
+    border: none;
+    font-size: 15px;
+    font-weight: 500;
+    padding: 3px 0;
+}
+QWidget#centralwidget[clinicalWorkspace="true"] QGroupBox#clinicalOperatorGroup QLabel[clinicalRole="operatorValue"] {
+    color: #193F63;
+    background: transparent;
+    border: none;
+    font-size: 17px;
+    font-weight: 700;
+    padding: 3px 0;
+}
+
+
+/* ===== Card-grouped layout: larger outer cards, lighter inner sections ===== */
+QWidget#centralwidget[clinicalWorkspace="true"] QGroupBox#clinicalIdentityCard,
+QWidget#centralwidget[clinicalWorkspace="true"] QGroupBox#clinicalPlanGroup,
+QWidget#centralwidget[clinicalWorkspace="true"] QGroupBox#clinicalWorkflowCard,
+QWidget#centralwidget[clinicalWorkspace="true"] QGroupBox#clinicalDispatchFrame {
+    background: #FFFFFF;
+    border: 1px solid #C9D9EA;
+    border-radius: 10px;
+    margin-top: 14px;
+    padding-top: 10px;
+    color: #2D5F9A;
+    font-size: 18px;
+    font-weight: 700;
+}
+
+QWidget#centralwidget[clinicalWorkspace="true"] QGroupBox#clinicalIdentityCard::title,
+QWidget#centralwidget[clinicalWorkspace="true"] QGroupBox#clinicalPlanGroup::title,
+QWidget#centralwidget[clinicalWorkspace="true"] QGroupBox#clinicalWorkflowCard::title,
+QWidget#centralwidget[clinicalWorkspace="true"] QGroupBox#clinicalDispatchFrame::title {
+    subcontrol-origin: margin;
+    left: 12px;
+    padding: 0 6px;
+    color: #2D5F9A;
+    background: #FFFFFF;
+    font-size: 18px;
+    font-weight: 700;
+}
+
+/* Inner sections become borderless content areas inside the larger cards. */
+QWidget#centralwidget[clinicalWorkspace="true"] QGroupBox#clinicalOperatorGroup,
+QWidget#centralwidget[clinicalWorkspace="true"] QGroupBox#clinicalPatientGroup,
+QWidget#centralwidget[clinicalWorkspace="true"] QGroupBox#clinicalSafetyCard,
+QWidget#centralwidget[clinicalWorkspace="true"] QGroupBox#clinicalExecutionColumn {
+    background: transparent;
+    border: none;
+    border-radius: 0px;
+    margin-top: 0px;
+    padding-top: 0px;
+}
+
+QWidget#centralwidget[clinicalWorkspace="true"] QGroupBox#clinicalOperatorGroup::title,
+QWidget#centralwidget[clinicalWorkspace="true"] QGroupBox#clinicalPatientGroup::title,
+QWidget#centralwidget[clinicalWorkspace="true"] QGroupBox#clinicalSafetyCard::title,
+QWidget#centralwidget[clinicalWorkspace="true"] QGroupBox#clinicalExecutionColumn::title {
+    subcontrol-origin: margin;
+    left: 0px;
+    padding: 0px;
+    color: transparent;
+    background: transparent;
+}
+
+/* Give the two inner sections a subtle divider rhythm without making them cards again. */
+QWidget#centralwidget[clinicalWorkspace="true"] QGroupBox#clinicalOperatorGroup,
+QWidget#centralwidget[clinicalWorkspace="true"] QGroupBox#clinicalPatientGroup {
+    padding-bottom: 6px;
+}
+
+QWidget#centralwidget[clinicalWorkspace="true"] QGroupBox#clinicalPatientGroup {
+    border-top: 1px solid #E5EEF7;
+    margin-top: 2px;
+    padding-top: 10px;
+}
+
+QWidget#centralwidget[clinicalWorkspace="true"] QGroupBox#clinicalExecutionColumn {
+    border-top: 1px solid #E5EEF7;
+    margin-top: 2px;
+    padding-top: 10px;
+}
+
+/* ===== SIMM medical monitoring card visual system (style only) =====
+/* Qt style sheets cannot draw a full-width gradient on QGroupBox::title;
+   the QWidget#clinicalMonitorCardBar children implement the actual header. */
+QWidget#centralwidget[clinicalWorkspace="true"] { background: #EBF3FA; }
+QWidget#centralwidget[clinicalWorkspace="true"] QWidget#clinicalPatientColumn,
+QWidget#centralwidget[clinicalWorkspace="true"] QWidget#clinicalMainWorkspace {
+    background: transparent; border: none;
+}
+QWidget#centralwidget[clinicalWorkspace="true"] QGroupBox#clinicalIdentityCard,
+QWidget#centralwidget[clinicalWorkspace="true"] QGroupBox#clinicalPlanGroup,
+QWidget#centralwidget[clinicalWorkspace="true"] QGroupBox#clinicalWorkflowCard,
+QWidget#centralwidget[clinicalWorkspace="true"] QGroupBox#clinicalDispatchFrame {
+    background: #FFFFFF;
+    color: #1A395B;
+    border: 1px solid #C4D8EA;
+    border-radius: 9px;
+    margin-top: 0px;
+    padding-top: 0px;
+    font-size: 15px;
+    font-weight: normal;
+}
+QWidget#centralwidget[clinicalWorkspace="true"] QWidget#clinicalMonitorCardBar {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #0360BE, stop:1 #1C83E5);
+    border: none;
+    border-radius: 7px;
+}
+QWidget#centralwidget[clinicalWorkspace="true"] QWidget#clinicalMonitorCardBar[cardTone="teal"] {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #06798F, stop:1 #149CA9);
+}
+QWidget#centralwidget[clinicalWorkspace="true"] QWidget#clinicalMonitorCardBar QLabel#clinicalMonitorCardCaption {
+    background: transparent;
+    border: none;
+    color: #FFFFFF;
+    font-size: 20px;
+    font-weight: 700;
+}
+QWidget#centralwidget[clinicalWorkspace="true"] QWidget#clinicalMonitorCardBar QLabel#clinicalMonitorCardGlyph {
+    background: transparent;
+    border: none;
+    color: #FFFFFF;
+    font-size: 21px;
+    font-weight: 700;
+}
+QWidget#centralwidget[clinicalWorkspace="true"] QWidget#clinicalMonitorSectionBar {
+    background: #EAF3FF;
+    border: 1px solid #D7E8FA;
+    border-radius: 5px;
+}
+QWidget#centralwidget[clinicalWorkspace="true"] QWidget#clinicalMonitorSectionBar QLabel#clinicalMonitorSectionCaption,
+QWidget#centralwidget[clinicalWorkspace="true"] QWidget#clinicalMonitorSectionBar QLabel[clinicalRole="groupHeading"] {
+    color: #13549D;
+    font-size: 16px;
+    font-weight: 700;
+    background: transparent;
+    border: none;
+    padding: 0px;
+}
+QWidget#centralwidget[clinicalWorkspace="true"] QWidget#clinicalMonitorSectionBar QLabel#clinicalMonitorSectionGlyph {
+    color: #13549D;
+    font-size: 14px;
+    background: transparent;
+    border: none;
+}
+/* Inner groups are content sections, not nested raised cards. */
+QWidget#centralwidget[clinicalWorkspace="true"] QGroupBox#clinicalOperatorGroup,
+QWidget#centralwidget[clinicalWorkspace="true"] QGroupBox#clinicalPatientGroup,
+QWidget#centralwidget[clinicalWorkspace="true"] QGroupBox#clinicalSafetyCard,
+QWidget#centralwidget[clinicalWorkspace="true"] QGroupBox#clinicalExecutionColumn {
+    background: transparent;
+    border: none;
+    border-radius: 0px;
+    margin-top: 0px;
+    padding-top: 0px;
+}
+QWidget#centralwidget[clinicalWorkspace="true"] QGroupBox#clinicalPatientGroup,
+QWidget#centralwidget[clinicalWorkspace="true"] QGroupBox#clinicalExecutionColumn {
+    border-top: 1px solid #D7E8FA;
+    padding-top: 6px;
+}
+/* Dense clinical controls, preserve dynamic status tone and interlock logic. */
+QWidget#centralwidget[clinicalWorkspace="true"] QGroupBox#clinicalIdentityCard QLabel[clinicalRole="operatorCaption"] {
+    color: #66829C; font-size: 14px; padding: 1px 0;
+}
+QWidget#centralwidget[clinicalWorkspace="true"] QGroupBox#clinicalIdentityCard QLabel[clinicalRole="operatorValue"] {
+    color: #1A395B; font-size: 17px; font-weight: 700; padding: 1px 0;
+}
+QWidget#centralwidget[clinicalWorkspace="true"] QGroupBox#clinicalIdentityCard QLabel#clinicalOperatorPhoto {
+    background: #F1F5F9; color: #66829C;
+    border: 1px dashed #D2E1EF; border-radius: 6px;
+    font-size: 13px; font-weight: normal;
+}
+QWidget#centralwidget[clinicalWorkspace="true"] QGroupBox#clinicalExecutionColumn QLabel[clinicalRole="step"] {
+    background: #F1F5F9; color: #66829C;
+    border: 1px solid #D2E1EF; border-bottom: 3px solid #D2E1EF;
+    border-radius: 5px; font-size: 15px; padding: 5px 2px;
+}
+QWidget#centralwidget[clinicalWorkspace="true"] QGroupBox#clinicalExecutionColumn QLabel[clinicalRole="step"][phaseState="done"] {
+    background: #E8F8EF;
+    color: #13764E;
+    border-color: #ACDCC2;
+    border-bottom-color: #27A06D;
+}
+QWidget#centralwidget[clinicalWorkspace="true"] QGroupBox#clinicalExecutionColumn QLabel[clinicalRole="step"][phaseState="current"] {
+    background: #E1EDFF;
+    color: #1761CF;
+    border-color: #75A7F2;
+    border-bottom-color: #2478E6; font-weight: 700;
+}
+QWidget#centralwidget[clinicalWorkspace="true"] QWidget[clinicalSafetyItem="true"] {
+    background: #F8FBFF; border: 1px solid #D2E1EF;
+    border-radius: 5px; padding: 1px;
+}
+QWidget#centralwidget[clinicalWorkspace="true"] QGroupBox#clinicalDispatchFrame QGroupBox#clinicalQueueCard,
+QWidget#centralwidget[clinicalWorkspace="true"] QGroupBox#clinicalDispatchFrame QGroupBox#clinicalDoseCard {
+    background: transparent; border: none; border-radius: 0; margin-top: 12px; padding: 3px;
+    color: #13549D; font-size: 16px; font-weight: 700;
+}
+QWidget#centralwidget[clinicalWorkspace="true"] QGroupBox#clinicalDispatchFrame QLabel[clinicalRole="roomState"],
+QWidget#centralwidget[clinicalWorkspace="true"] QGroupBox#clinicalDispatchFrame QLabel[clinicalRole="muted"] {
+    color: #66829C; font-size: 14px;
+}
+QWidget#centralwidget[clinicalWorkspace="true"] QGroupBox#clinicalDispatchFrame QPushButton:disabled {
+    background: #F1F5F9; color: #66829C;
+    border: 1px solid #D2E1EF; border-radius: 5px;
+}
+QWidget#centralwidget[clinicalWorkspace="true"] QSplitter#clinicalColumns::handle,
+QWidget#centralwidget[clinicalWorkspace="true"] QSplitter#clinicalLowerColumns::handle {
+    background: #EBF3FA; width: 7px;
+}
+
+/* ===== Two independent monitor cards: safety and workflow =====
+   The C++ reuses the real interlock/readback widgets and the original workflow
+   ring. These styles affect presentation only, not backend state or permissions. */
+QWidget#centralwidget[clinicalWorkspace="true"] QWidget#clinicalSafetyWorkflowStack {
+    background: transparent;
+    border: none;
+}
+QWidget#centralwidget[clinicalWorkspace="true"] QGroupBox#clinicalSafetyCard,
+QWidget#centralwidget[clinicalWorkspace="true"] QGroupBox#clinicalExecutionColumn {
+    background: #FFFFFF;
+    border: 1px solid #C4D8EA;
+    border-radius: 9px;
+    margin-top: 0px;
+    padding-top: 0px;
+}
+QWidget#centralwidget[clinicalWorkspace="true"] QGroupBox#clinicalSafetyCard::title,
+QWidget#centralwidget[clinicalWorkspace="true"] QGroupBox#clinicalExecutionColumn::title {
+    color: transparent;
+    background: transparent;
+    margin: 0;
+    padding: 0;
+}
+/* The safety card and the workflow card are separate outer borders; remove
+   the old divider that made workflow look like an inner section. */
+QWidget#centralwidget[clinicalWorkspace="true"] QGroupBox#clinicalExecutionColumn {
+    border-top: 1px solid #C4D8EA;
+    padding-top: 0px;
+}
+QWidget#centralwidget[clinicalWorkspace="true"] QGroupBox#clinicalSafetyCard QWidget#clinicalMonitorCardBar,
+QWidget#centralwidget[clinicalWorkspace="true"] QGroupBox#clinicalExecutionColumn QWidget#clinicalMonitorCardBar {
+    min-height: 42px;
+    max-height: 42px;
+}
+
+
+/* Patient photo: mirror the operator card, without changing real patient data. */
+QWidget#centralwidget[clinicalWorkspace="true"] QGroupBox#clinicalPatientGroup QLabel#clinicalPatientPhoto {
+    background: #F1F5F9;
+    color: #66829C;
+    border: 1px dashed #D2E1EF;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: normal;
+    padding: 4px;
+}
+/* Keep the patient identity fields visually compact beside the photo. */
+QWidget#centralwidget[clinicalWorkspace="true"] QGroupBox#clinicalPatientGroup QGroupBox#groupBoxPatientInfo {
+    background: transparent;
+    border: none;
+    margin-top: 0px;
+    padding-top: 0px;
+}

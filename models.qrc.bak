@@ -1,0 +1,16 @@
+<RCC>
+    <qresource prefix="/models">
+        <file>J0.glb</file>
+        <file>J1.glb</file>
+        <file>J2.glb</file>
+        <file>J3.glb</file>
+        <file>J4.glb</file>
+        <file>J5.glb</file>
+        <file>J6.glb</file>
+        <file>J7.glb</file>
+        <file>Bed3DView.qml</file>
+        <file>StepProgressBar.qml</file>
+        <file>eye.svg</file>
+        <file>eye-slash.svg</file>
+    </qresource>
+</RCC>
