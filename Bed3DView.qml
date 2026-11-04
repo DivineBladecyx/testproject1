@@ -21,6 +21,9 @@ Item {
     // 当前所处 12 步状态机索引（0 ~ 11，默认排程叫号为 2，即 STEP 03）
     property int currentStepIndex: 2
 
+    // 当用户在圆环上点击节点时通知外部
+    signal stepSelected(int stepIndex)
+
     // 12 状态机定义（与网页版碳离子系统 100% 对应）
     readonly property var workflowSteps: [
         { num: "01", name: "系统初始化", code: "INIT", desc: "环境及通信检查" },
@@ -413,6 +416,7 @@ Item {
                             cursorShape: Qt.PointingHandCursor
                             onClicked: {
                                 root.currentStepIndex = nodeItem.index;
+                                root.stepSelected(nodeItem.index);
                             }
                         }
                     }

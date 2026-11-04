@@ -6,19 +6,66 @@ import QtQuick.Layouts
 Item {
     id: root
 
-    // 当前主阶段索引 (0 ~ 4)
-    property int currentStep: 1 // 默认为 02 叫号
+    // 当前具体的 12 步工作流索引 (0 ~ 11，默认为 2 即 03 排程叫号)
+    property int currentWorkflowStep: 2
 
-    // 5 大主阶段分组定义（与网页版流程监控一致）
+    // 当用户点击阶段卡片时通知外部
+    signal stageSelected(int stageIndex)
+
+    // 5 大主阶段分组定义（与网页版流程监控 100% 对应）
     readonly property var stages: [
-        { num: "01", name: "初始化", progress: "1 / 1", total: 1, done: 1 },
-        { num: "02", name: "叫号",   progress: "2 / 3", total: 3, done: 2 },
-        { num: "03", name: "准备",   progress: "0 / 2", total: 2, done: 0 },
-        { num: "04", name: "出束",   progress: "0 / 2", total: 2, done: 0 },
-        { num: "05", name: "结束",   progress: "0 / 2", total: 2, done: 0 }
+        { num: "01", name: "初始化", totalSteps: 1, startStep: 0, endStep: 0 },
+        { num: "02", name: "叫号",   totalSteps: 3, startStep: 1, endStep: 3 },
+        { num: "03", name: "准备",   totalSteps: 2, startStep: 4, endStep: 5 },
+        { num: "04", name: "出束",   totalSteps: 2, startStep: 6, endStep: 9 },
+        { num: "05", name: "结束",   totalSteps: 2, startStep: 10, endStep: 11 }
     ]
 
-    // 柔和色彩方案
+    // 根据当前具体步骤计算所属的主阶段 (0 ~ 4)
+    function currentStageIndex() {
+        var s = root.currentWorkflowStep;
+        if (s <= 0) return 0;
+        if (s <= 3) return 1;
+        if (s <= 5) return 2;
+        if (s <= 9) return 3;
+        return 4;
+    }
+
+    // 动态计算每个阶段的进度文字（如 1/1, 2/3, 0/2）
+    function stageProgressText(stageIdx) {
+        var curStage = currentStageIndex();
+        var cfg = stages[stageIdx];
+        if (stageIdx < curStage) {
+            return cfg.totalSteps + " / " + cfg.totalSteps;
+        } else if (stageIdx === curStage) {
+            var doneInStage = 1;
+            if (stageIdx === 0) doneInStage = 1;
+            else if (stageIdx === 1) doneInStage = Math.min(cfg.totalSteps, Math.max(1, root.currentWorkflowStep - cfg.startStep + 1));
+            else if (stageIdx === 2) doneInStage = Math.min(cfg.totalSteps, Math.max(1, root.currentWorkflowStep - cfg.startStep + 1));
+            else if (stageIdx === 3) doneInStage = Math.min(cfg.totalSteps, Math.max(1, Math.floor((root.currentWorkflowStep - cfg.startStep) / 2) + 1));
+            else doneInStage = Math.min(cfg.totalSteps, Math.max(1, root.currentWorkflowStep - cfg.startStep + 1));
+            return doneInStage + " / " + cfg.totalSteps;
+        } else {
+            return "0 / " + cfg.totalSteps;
+        }
+    }
+
+    // 动态计算每个阶段的进度比率 (0.0 ~ 1.0)
+    function stageProgressRatio(stageIdx) {
+        var curStage = currentStageIndex();
+        var cfg = stages[stageIdx];
+        if (stageIdx < curStage) return 1.0;
+        if (stageIdx > curStage) return 0.0;
+        if (stageIdx === 0) return 1.0;
+        var doneInStage = 1;
+        if (stageIdx === 1) doneInStage = Math.min(cfg.totalSteps, Math.max(1, root.currentWorkflowStep - cfg.startStep + 1));
+        else if (stageIdx === 2) doneInStage = Math.min(cfg.totalSteps, Math.max(1, root.currentWorkflowStep - cfg.startStep + 1));
+        else if (stageIdx === 3) doneInStage = Math.min(cfg.totalSteps, Math.max(1, Math.floor((root.currentWorkflowStep - cfg.startStep) / 2) + 1));
+        else doneInStage = Math.min(cfg.totalSteps, Math.max(1, root.currentWorkflowStep - cfg.startStep + 1));
+        return doneInStage / cfg.totalSteps;
+    }
+
+    // 柔和现代色彩
     readonly property color panelBg: "#FFFFFF"
     readonly property color panelBorder: "#E2E8F0"
     readonly property color textPrimary: "#0F172A"
@@ -42,7 +89,7 @@ Item {
             anchors.margins: 10
             spacing: 6
 
-            // 顶部：标题与状态图例 (完全对标网页版)
+            // 顶部：标题与状态图例 (对标网页版)
             RowLayout {
                 Layout.fillWidth: true
 
@@ -109,9 +156,10 @@ Item {
                         Layout.fillHeight: true
                         radius: 6
 
-                        readonly property bool isDone: stageCard.index < root.currentStep
-                        readonly property bool isActive: stageCard.index === root.currentStep
-                        readonly property bool isPending: stageCard.index > root.currentStep
+                        readonly property int curStage: root.currentStageIndex()
+                        readonly property bool isDone: stageCard.index < stageCard.curStage
+                        readonly property bool isActive: stageCard.index === stageCard.curStage
+                        readonly property bool isPending: stageCard.index > stageCard.curStage
 
                         color: stageCard.isActive ? "#EFF6FF" :
                                stageCard.isDone ? "#F0FDF4" : "#F8FAFC"
@@ -135,7 +183,7 @@ Item {
                                 }
                                 Item { Layout.fillWidth: true }
                                 Text {
-                                    text: root.stages[stageCard.index].progress
+                                    text: root.stageProgressText(stageCard.index)
                                     font.pixelSize: 10
                                     font.family: "Menlo"
                                     color: stageCard.isActive ? root.activeBlue :
@@ -155,10 +203,7 @@ Item {
                                     anchors.top: parent.top
                                     anchors.bottom: parent.bottom
                                     radius: 1.5
-                                    width: parent.width * (
-                                        stageCard.isDone ? 1.0 :
-                                        stageCard.isActive ? (root.stages[stageCard.index].done / root.stages[stageCard.index].total) : 0.0
-                                    )
+                                    width: parent.width * root.stageProgressRatio(stageCard.index)
                                     color: stageCard.isDone ? root.doneGreen : root.activeBlue
                                 }
                             }
@@ -168,7 +213,7 @@ Item {
                             anchors.fill: parent
                             cursorShape: Qt.PointingHandCursor
                             onClicked: {
-                                root.currentStep = stageCard.index;
+                                root.stageSelected(stageCard.index);
                             }
                         }
                     }

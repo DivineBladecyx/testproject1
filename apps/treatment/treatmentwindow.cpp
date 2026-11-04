@@ -3984,6 +3984,51 @@ void TreatmentWindow::initStepView()
     ui->qmlStepContainer->setMinimumHeight(64);
     ui->qmlStepContainer->setMaximumHeight(82);
     updateStepBar();
+    connectWorkflowViews();
+}
+
+void TreatmentWindow::connectWorkflowViews()
+{
+    if (!m_stepView || !m_bedView) return;
+    QObject *stepRoot = m_stepView->rootObject();
+    QObject *bedRoot = m_bedView->rootObject();
+    if (!stepRoot || !bedRoot) return;
+
+    connect(stepRoot, SIGNAL(stageSelected(int)), this, SLOT(onWorkflowStageSelected(int)), Qt::UniqueConnection);
+    connect(bedRoot, SIGNAL(stepSelected(int)), this, SLOT(onWorkflowStepSelected(int)), Qt::UniqueConnection);
+}
+
+void TreatmentWindow::onWorkflowStageSelected(int stageIndex)
+{
+    int targetStep = 2;
+    switch (stageIndex) {
+    case 0: targetStep = 0; break; // 01 系统初始化
+    case 1: targetStep = 2; break; // 03 排程叫号
+    case 2: targetStep = 4; break; // 05 计划审核
+    case 3: targetStep = 6; break; // 07 申请出束
+    case 4: targetStep = 10; break; // 11 操作复位
+    default: targetStep = 2; break;
+    }
+    syncWorkflowStep(targetStep);
+}
+
+void TreatmentWindow::onWorkflowStepSelected(int stepIndex)
+{
+    syncWorkflowStep(stepIndex);
+}
+
+void TreatmentWindow::syncWorkflowStep(int stepIndex)
+{
+    if (m_stepView) {
+        if (QObject *stepRoot = m_stepView->rootObject()) {
+            stepRoot->setProperty("currentWorkflowStep", stepIndex);
+        }
+    }
+    if (m_bedView) {
+        if (QObject *bedRoot = m_bedView->rootObject()) {
+            bedRoot->setProperty("currentStepIndex", stepIndex);
+        }
+    }
 }
 
 void TreatmentWindow::initConnectionState()
@@ -4862,32 +4907,24 @@ void TreatmentWindow::updateTimeLabel()
 
 void TreatmentWindow::updateStepBar()
 {
-    if (m_stepView) {
-        if (QObject *root = m_stepView->rootObject()) {
-            root->setProperty("currentStep", treatmentStateToStep(m_treatmentState));
-        }
+    int orbitIndex = 2; // 默认 03 排程叫号
+    switch (m_treatmentState) {
+    case TreatmentState::Idle: orbitIndex = 0; break;
+    case TreatmentState::PlanConfirm: orbitIndex = 3; break;
+    case TreatmentState::Preparing: orbitIndex = 5; break;
+    case TreatmentState::ReadyToApplyBeam: orbitIndex = 6; break;
+    case TreatmentState::BeamRequested:
+    case TreatmentState::BeamReady: orbitIndex = 7; break;
+    case TreatmentState::Treating: orbitIndex = 8; break;
+    case TreatmentState::Paused: orbitIndex = 9; break;
+    case TreatmentState::BeamFinished:
+    case TreatmentState::ReportConfirm: orbitIndex = 10; break;
+    case TreatmentState::Completed: orbitIndex = 11; break;
+    case TreatmentState::ErrorStopped: orbitIndex = 9; break;
+    default: orbitIndex = 2; break;
     }
-    if (m_bedView) {
-        if (QObject *bedRoot = m_bedView->rootObject()) {
-            int orbitIndex = 2; // 默认 03 排程叫号
-            switch (m_treatmentState) {
-            case TreatmentState::Idle: orbitIndex = 0; break;
-            case TreatmentState::PlanConfirm: orbitIndex = 3; break;
-            case TreatmentState::Preparing: orbitIndex = 5; break;
-            case TreatmentState::ReadyToApplyBeam: orbitIndex = 6; break;
-            case TreatmentState::BeamRequested:
-            case TreatmentState::BeamReady: orbitIndex = 7; break;
-            case TreatmentState::Treating: orbitIndex = 8; break;
-            case TreatmentState::Paused: orbitIndex = 9; break;
-            case TreatmentState::BeamFinished:
-            case TreatmentState::ReportConfirm: orbitIndex = 10; break;
-            case TreatmentState::Completed: orbitIndex = 11; break;
-            case TreatmentState::ErrorStopped: orbitIndex = 9; break;
-            default: orbitIndex = 2; break;
-            }
-            bedRoot->setProperty("currentStepIndex", orbitIndex);
-        }
-    }
+    syncWorkflowStep(orbitIndex);
+
     const int step = treatmentStateToStep(m_treatmentState);
     for (int index = 0; index < 5; ++index) {
         if (auto *label = findChild<QLabel *>(QStringLiteral("clinicalStep%1").arg(index))) {

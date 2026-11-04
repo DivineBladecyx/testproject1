@@ -1,4 +1,4 @@
-﻿#ifndef TREATMENTWINDOW_H
+#ifndef TREATMENTWINDOW_H
 #define TREATMENTWINDOW_H
 #include "logindialog.h"
 #include "clientbootstrap.h"
@@ -84,12 +84,16 @@ private slots:
     void onWebSocketError(const QString &error);
     void onWebSocketDataReceived(const QJsonObject &data);
     void onWebSocketDataSent(const QString &messageId);
+    void onWorkflowStageSelected(int stageIndex);
+    void onWorkflowStepSelected(int stepIndex);
 
     void initTheme();
     void initWebSocket();
     void initBedView();
     void initStepView();
     void initConnectionState();
+    void syncWorkflowStep(int stepIndex);
+    void connectWorkflowViews();
 
     void handleRspMessage(const QJsonObject &data);
     void handleTelemetryMessage(const QJsonObject &data);
