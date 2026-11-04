@@ -327,3 +327,129 @@ QStatusBar {
 QStatusBar::item {
     border: none;
 }
+
+/* ==========================================================================
+   HeaderBar & Safety Matrix & 1:1 Web Replica Components
+   ========================================================================== */
+
+/* 顶部第一行导航栏容器 */
+QFrame#navPrimaryRow {
+    background: #FFFFFF;
+    border-bottom: 1px solid #CBD5E1;
+    min-height: 48px;
+    max-height: 52px;
+}
+
+/* 顶部第二行公共看板 Ribbon */
+QWidget#telemetryRibbon {
+    background: transparent;
+}
+
+/* 操作员卡片与安全联锁矩阵卡片 */
+QFrame#userProfileCard,
+QFrame#safetyMatrixCard,
+QFrame#doseMonitorCard,
+QFrame#admissionCard,
+QFrame#systemLogsDock {
+    background: #FFFFFF;
+    border: 1px solid #CBD5E1;
+    border-radius: 6px;
+}
+
+/* 指示灯单元格 (lamp-cell) */
+QFrame.lamp-cell {
+    background: #F8FAFC;
+    border: 1px solid #E2E8F0;
+    border-left: 3px solid #059669;
+    border-radius: 4px;
+}
+
+QFrame.lamp-cell[status="danger"] {
+    background: #FEF2F2;
+    border-color: #FECACA;
+    border-left: 3px solid #DC2626;
+}
+
+QFrame.lamp-cell[status="amber"] {
+    background: #FFFBEB;
+    border-color: #FDE68A;
+    border-left: 3px solid #D97706;
+}
+
+/* 工作流状态胶囊 (workflow-status-capsule) */
+QFrame#workflowCapsule {
+    background: #EFF6FF;
+    border: 1px solid #BFDBFE;
+    border-radius: 14px;
+    padding: 2px 12px;
+}
+
+QFrame#workflowCapsule[isError="true"] {
+    background: #FEF2F2;
+    border-color: #FECACA;
+}
+
+/* 模式切换单选按钮 */
+QPushButton.mode-btn {
+    background: #F8FAFC;
+    border: 1px solid #CBD5E1;
+    border-radius: 4px;
+    padding: 4px 10px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #475569;
+}
+
+QPushButton.mode-btn:checked {
+    background: #2563EB;
+    border-color: #2563EB;
+    color: #FFFFFF;
+}
+
+/* 日志落盘卡片按钮 */
+QPushButton.header-log-btn {
+    background: #F8FAFC;
+    border: 1px solid #E2E8F0;
+    border-radius: 4px;
+    padding: 3px 8px;
+    font-size: 11px;
+    font-family: "Menlo", monospace;
+    color: #475569;
+}
+
+QPushButton.header-log-btn:hover {
+    background: #EFF6FF;
+    border-color: #93C5FD;
+    color: #2563EB;
+}
+
+/* 准入排队大按钮 */
+QPushButton#btnBeamApplyLarge {
+    background: #3B82F6;
+    border: 1px solid #2563EB;
+    border-radius: 6px;
+    color: #FFFFFF;
+    font-size: 14px;
+    font-weight: 700;
+    padding: 8px 16px;
+    min-height: 40px;
+}
+
+QPushButton#btnBeamApplyLarge:hover {
+    background: #2563EB;
+}
+
+QPushButton#btnBeamApplyLarge:disabled {
+    background: #F1F5F9;
+    border-color: #CBD5E1;
+    color: #94A3B8;
+}
+
+/* 准入状态条 */
+QFrame#admissionStatusBanner {
+    background: #EFF6FF;
+    border: 1px solid #BFDBFE;
+    border-radius: 4px;
+    padding: 4px 8px;
+}
+

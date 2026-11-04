@@ -4,12 +4,12 @@ import QtQuick.Controls
 
 Item {
     id: root
-    implicitWidth: 640
-    implicitHeight: 340
+    implicitWidth: 960
+    implicitHeight: 520
 
-    // ==========================================
-    // 1. 数据绑定与平滑过渡
-    // ==========================================
+    // =========================================================================
+    // 1. 业务数据模型与后端联动状态（与 Vue3 tcsStore 100% 对应）
+    // =========================================================================
     property real axisA: (typeof bedController !== "undefined" && bedController) ? bedController.a1 : 0.0
     property real axisB: (typeof bedController !== "undefined" && bedController) ? bedController.a2 : 0.0
     property real axisC: (typeof bedController !== "undefined" && bedController) ? bedController.a3 : 0.0
@@ -18,40 +18,95 @@ Item {
     property real axisZ: (typeof bedController !== "undefined" && bedController) ? bedController.a6 : 0.0
     property bool isAlarm: (typeof bedController !== "undefined" && bedController) ? bedController.alarm : false
 
-    // 当前所处 12 步状态机索引（0 ~ 11，默认排程叫号为 2，即 STEP 03）
+    // 当前时序状态索引 (0 ~ 11，默认为 2 即 WAITING_OIS_SCHEDULE_CONFIRM)
     property int currentStepIndex: 2
+    property bool isErrorStopped: false
 
-    // 当用户在圆环上点击节点时通知外部
+    // 外部联动信号
     signal stepSelected(int stepIndex)
+    signal ridgeFilterToggled(bool inPosition)
+    signal drResetRequested()
+    signal ddsResetRequested()
 
-    // 12 状态机定义（与网页版碳离子系统 100% 对应）
-    readonly property var workflowSteps: [
-        { num: "01", name: "系统初始化", code: "INIT", desc: "环境及通信检查" },
-        { num: "02", name: "操作员登录", code: "LOGIN", desc: "身份验证通过" },
-        { num: "03", name: "排程叫号", code: "SCHEDULE", desc: "等待叫号指令" },
-        { num: "04", name: "计划确认", code: "PLAN_ACK", desc: "核对靶区与剂量" },
-        { num: "05", name: "计划审核", code: "PLAN_VERIFY", desc: "物理师及医生审批" },
-        { num: "06", name: "治疗摆位", code: "SETUP", desc: "六自由度床位对位" },
-        { num: "07", name: "申请出束", code: "BEAM_APPLY", desc: "请求主控照射许可" },
-        { num: "08", name: "排队就绪", code: "QUEUE_READY", desc: "束流准备就绪" },
-        { num: "09", name: "束流照射", code: "IRRADIATION", desc: "正在出束治疗" },
-        { num: "10", name: "出束暂停", code: "PAUSED", desc: "照射暂停保压" },
-        { num: "11", name: "操作复位", code: "RESET", desc: "设备与床位归位" },
-        { num: "12", name: "综合日志", code: "LOGGING", desc: "保存本次执行记录" }
+    // 12 个时序状态列表与元数据定义 (与 Vue3 FSM_ORDER 及 STATE_META 1:1 严格对齐)
+    readonly property var fsmOrder: [
+        'INIT',
+        'WAITING_LOGIN',
+        'WAITING_OIS_SCHEDULE_CONFIRM',
+        'WAITING_FRONTEND_PLAN_CONFIRM',
+        'WAITING_DEVICE_PLAN_ACK',
+        'WAITING_DEVICE_AUTOPOS_DONE',
+        'WAITING_FRONTEND_BEAM_APPLY',
+        'WAITING_DEVICE_BEAM_READY',
+        'TREATMENT_IN_PROGRESS',
+        'TREATMENT_PAUSED',
+        'WAITING_TREATMENT_END',
+        'WATING_CHART_GENERATION'
     ]
 
-    // 柔和配色方案（与网页版一致）
-    readonly property color bgSlate: "#F8FAFC"
+    readonly property var stateMetaList: [
+        { key: "INIT", num: "01", cn: "系统初始化", en: "INIT", desc: "自检与硬件握手" },
+        { key: "WAITING_LOGIN", num: "02", cn: "操作员登录", en: "LOGIN", desc: "登录与绑定机房" },
+        { key: "WAITING_OIS_SCHEDULE_CONFIRM", num: "03", cn: "排程叫号", en: "SCHEDULE", desc: "接收叫号指令" },
+        { key: "WAITING_FRONTEND_PLAN_CONFIRM", num: "04", cn: "计划确认", en: "PLAN_CONFIRM", desc: "核对计划与参数" },
+        { key: "WAITING_DEVICE_PLAN_ACK", num: "05", cn: "计划审核", en: "PLAN_ACK", desc: "审核与标定确认" },
+        { key: "WAITING_DEVICE_AUTOPOS_DONE", num: "06", cn: "图像摆位", en: "AUTOPOS", desc: "曝光、配准与移床" },
+        { key: "WAITING_FRONTEND_BEAM_APPLY", num: "07", cn: "申请出束", en: "BEAM_APPLY", desc: "摆位就绪，申请出束" },
+        { key: "WAITING_DEVICE_BEAM_READY", num: "08", cn: "排队就绪", en: "BEAM_READY", desc: "排队准入与计划下发" },
+        { key: "TREATMENT_IN_PROGRESS", num: "09", cn: "束流照射", en: "IN_PROGRESS", desc: "束流照射与剂量监测" },
+        { key: "TREATMENT_PAUSED", num: "10", cn: "出束暂停", en: "PAUSED", desc: "照射暂停，保持现场" },
+        { key: "WAITING_TREATMENT_END", num: "11", cn: "硬件复位", en: "TREATMENT_END", desc: "退过滤器与退床" },
+        { key: "WATING_CHART_GENERATION", num: "12", cn: "报告归档", en: "CHART_GEN", desc: "生成并上报报告" }
+    ]
+
+    // 5 大宏观临床状态定义 (与 Vue3 MACRO_PHASE_DEFS 一致)
+    readonly property var macroPhaseDefs: [
+        { key: 'INIT', title: '初始化', sub: 'INIT', startIdx: 0, endIdx: 0 },
+        { key: 'PRESET', title: '预置', sub: 'PRESET', startIdx: 1, endIdx: 4 },
+        { key: 'PREPARE', title: '准备', sub: 'PREPARE', startIdx: 5, endIdx: 7 },
+        { key: 'BEAM', title: '出束', sub: 'BEAM', startIdx: 8, endIdx: 9 },
+        { key: 'COMPLETE', title: '结案', sub: 'COMPLETE', startIdx: 10, endIdx: 11 }
+    ]
+
+    // 当前宏观阶段计算
+    function currentMacroDef() {
+        var idx = root.currentStepIndex;
+        for (var i = 0; i < macroPhaseDefs.length; ++i) {
+            var def = macroPhaseDefs[i];
+            if (idx >= def.startIdx && idx <= def.endIdx) return def;
+        }
+        return macroPhaseDefs[0];
+    }
+
+    // 机构模拟状态（与 store.hardware 一致）
+    property bool ridgeFilterInPosition: true
+    property bool drAtWorkPosition: true
+    property bool ddsHasFault: false
+    property bool couchConnected: true
+    property bool couchSystemReady: true
+    property bool couchRemoteMode: true
+
+    // 目标基准与配准坐标（与 store.targetCouch 一致）
+    property var couchData: [
+        { name: "X", actual: (root.axisX !== 0 ? root.axisX.toFixed(2) : "2149.76"), unit: "mm", target: "2149.76", base: "2150.0", shift: "-0.24" },
+        { name: "Y", actual: (root.axisY !== 0 ? root.axisY.toFixed(2) : "158.49"),  unit: "mm", target: "158.49",  base: "158.0",  shift: "+0.49" },
+        { name: "Z", actual: (root.axisZ !== 0 ? root.axisZ.toFixed(2) : "1433.03"), unit: "mm", target: "1433.03", base: "1433.0", shift: "+0.03" },
+        { name: "Yaw", actual: (root.axisA !== 0 ? root.axisA.toFixed(2) : "0.42"),  unit: "°", target: "0.42",   base: "0.40",   shift: "+0.02" },
+        { name: "Pitch", actual: (root.axisB !== 0 ? root.axisB.toFixed(2) : "0.15"), unit: "°", target: "0.15",   base: "0.10",   shift: "+0.05" },
+        { name: "Roll", actual: (root.axisC !== 0 ? root.axisC.toFixed(2) : "0.02"), unit: "°", target: "0.02",   base: "0.00",   shift: "+0.02" }
+    ]
+
+    // 网页版标准调色盘 (Slate & Tech Blue)
+    readonly property color bgSlate: "#F1F5F9"
     readonly property color cardBg: "#FFFFFF"
     readonly property color cardBorder: "#E2E8F0"
     readonly property color textMain: "#0F172A"
     readonly property color textMuted: "#64748B"
     readonly property color accentBlue: "#2563EB"
     readonly property color accentLightBlue: "#EFF6FF"
-    readonly property color accentGreen: "#059669"
+    readonly property color accentGreen: "#10B981"
     readonly property color accentLightGreen: "#ECFDF5"
 
-    // 外层容器底色
     Rectangle {
         anchors.fill: parent
         color: root.bgSlate
@@ -59,14 +114,14 @@ Item {
 
     RowLayout {
         anchors.fill: parent
-        anchors.margins: 12
-        spacing: 12
+        anchors.margins: 10
+        spacing: 10
 
         // =====================================================================
-        // 左侧卡片：床坐标 (六自由度)
+        // 左翼面板 (flank-left)：六自由度双列对比表 + 床控制模式
         // =====================================================================
         Rectangle {
-            Layout.preferredWidth: Math.min(230, Math.max(160, root.width * 0.22))
+            Layout.preferredWidth: Math.min(235, Math.max(180, root.width * 0.23))
             Layout.fillHeight: true
             radius: 8
             color: root.cardBg
@@ -75,17 +130,17 @@ Item {
 
             ColumnLayout {
                 anchors.fill: parent
-                anchors.margins: 12
+                anchors.margins: 10
                 spacing: 8
 
-                // 标题栏与胶囊状态
+                // 标题栏与胶囊状态 (与 Vue3 一模一样)
                 RowLayout {
                     Layout.fillWidth: true
                     spacing: 6
 
                     Text {
-                        text: "床坐标（六自由度）"
-                        font.pixelSize: 13
+                        text: "床坐标 (六自由度)"
+                        font.pixelSize: 12
                         font.bold: true
                         color: root.textMain
                     }
@@ -93,92 +148,94 @@ Item {
                     Item { Layout.fillWidth: true }
 
                     Rectangle {
-                        implicitWidth: 42
-                        implicitHeight: 20
-                        radius: 4
-                        color: root.accentLightBlue
-                        border.color: "#BFDBFE"
+                        implicitWidth: 38
+                        implicitHeight: 18
+                        radius: 3
+                        color: root.couchConnected ? root.accentLightGreen : "#F1F5F9"
+                        border.color: root.couchConnected ? "#A7F3D0" : "#E2E8F0"
                         Text {
                             anchors.centerIn: parent
-                            text: "已就绪"
-                            font.pixelSize: 10
+                            text: root.couchConnected ? "已连接" : "待机"
+                            font.pixelSize: 9
                             font.bold: true
-                            color: root.accentBlue
+                            color: root.couchConnected ? "#059669" : root.textMuted
                         }
                     }
 
                     Rectangle {
-                        implicitWidth: 32
-                        implicitHeight: 20
-                        radius: 4
-                        color: root.accentLightGreen
-                        border.color: "#A7F3D0"
+                        implicitWidth: 30
+                        implicitHeight: 18
+                        radius: 3
+                        color: root.couchSystemReady ? root.accentLightGreen : "#F1F5F9"
+                        border.color: root.couchSystemReady ? "#A7F3D0" : "#E2E8F0"
                         Text {
                             anchors.centerIn: parent
-                            text: "正常"
-                            font.pixelSize: 10
+                            text: root.couchSystemReady ? "就绪" : "待机"
+                            font.pixelSize: 9
                             font.bold: true
-                            color: root.accentGreen
+                            color: root.couchSystemReady ? "#059669" : root.textMuted
                         }
                     }
                 }
 
-                // 表头
+                // 双列对比表头
                 Rectangle {
                     Layout.fillWidth: true
-                    implicitHeight: 24
-                    radius: 4
-                    color: "#F1F5F9"
+                    implicitHeight: 22
+                    radius: 3
+                    color: "#F8FAFC"
 
                     RowLayout {
                         anchors.fill: parent
-                        anchors.leftMargin: 8
-                        anchors.rightMargin: 8
-                        Text { text: "轴"; font.pixelSize: 11; font.bold: true; color: root.textMuted; Layout.preferredWidth: 32 }
-                        Text { text: "实际位置"; font.pixelSize: 11; font.bold: true; color: root.textMuted; Layout.fillWidth: true; horizontalAlignment: Text.AlignRight }
-                        Text { text: "目标(偏差)"; font.pixelSize: 11; font.bold: true; color: root.textMuted; Layout.preferredWidth: 70; horizontalAlignment: Text.AlignRight }
+                        anchors.leftMargin: 6
+                        anchors.rightMargin: 6
+                        Text { text: "轴"; font.pixelSize: 10; font.bold: true; color: root.textMuted; Layout.preferredWidth: 28 }
+                        Text { text: "实际位置"; font.pixelSize: 10; font.bold: true; color: root.textMuted; Layout.fillWidth: true; horizontalAlignment: Text.AlignRight }
+                        Text { text: "目标 (基准+配准)"; font.pixelSize: 10; font.bold: true; color: root.textMuted; Layout.preferredWidth: 85; horizontalAlignment: Text.AlignRight }
                     }
                 }
 
-                // 六轴数据列表
+                // 六轴实际 vs 目标(基准+配准)
                 ListView {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
                     clip: true
-                    spacing: 4
+                    spacing: 3
                     interactive: false
 
-                    model: [
-                        { name: "X",  val: (root.axisX !== 0 ? root.axisX.toFixed(2) : "2149.76"), unit: " mm", target: "2149.76" },
-                        { name: "Y",  val: (root.axisY !== 0 ? root.axisY.toFixed(2) : "158.49"),  unit: " mm", target: "158.49" },
-                        { name: "Z",  val: (root.axisZ !== 0 ? root.axisZ.toFixed(2) : "1433.03"), unit: " mm", target: "1433.03" },
-                        { name: "Yaw",   val: (root.axisA !== 0 ? root.axisA.toFixed(2) : "0.42"),    unit: "°", target: "0.42" },
-                        { name: "Pitch", val: (root.axisB !== 0 ? root.axisB.toFixed(2) : "0.15"),    unit: "°", target: "0.15" },
-                        { name: "Roll",  val: (root.axisC !== 0 ? root.axisC.toFixed(2) : "0.02"),    unit: "°", target: "0.02" }
-                    ]
+                    model: root.couchData
 
                     delegate: Rectangle {
                         width: ListView.view.width
                         implicitHeight: 28
-                        radius: 4
-                        color: index % 2 === 0 ? "#FAFAFA" : "#FFFFFF"
+                        radius: 3
+                        color: index % 2 === 0 ? "#F8FAFC" : "#FFFFFF"
 
                         RowLayout {
                             anchors.fill: parent
-                            anchors.leftMargin: 8
-                            anchors.rightMargin: 8
+                            anchors.leftMargin: 6
+                            anchors.rightMargin: 6
 
-                            Text {
-                                text: modelData.name
-                                font.pixelSize: 12
-                                font.bold: true
-                                color: root.accentBlue
-                                Layout.preferredWidth: 32
+                            // 轴徽章
+                            Rectangle {
+                                Layout.preferredWidth: 24
+                                Layout.preferredHeight: 18
+                                radius: 3
+                                color: "#EFF6FF"
+                                border.color: "#BFDBFE"
+                                Text {
+                                    anchors.centerIn: parent
+                                    text: modelData.name
+                                    font.pixelSize: 10
+                                    font.bold: true
+                                    color: root.accentBlue
+                                }
                             }
 
+                            // 实际位置
                             Text {
-                                text: modelData.val + modelData.unit
-                                font.pixelSize: 12
+                                text: modelData.actual + modelData.unit
+                                font.pixelSize: 11
                                 font.bold: true
                                 font.family: "Menlo"
                                 color: root.textMain
@@ -186,65 +243,79 @@ Item {
                                 horizontalAlignment: Text.AlignRight
                             }
 
-                            Row {
-                                Layout.preferredWidth: 70
-                                Layout.alignment: Qt.AlignRight
-                                spacing: 4
-
+                            // 目标值 + (基准+配准细分)
+                            ColumnLayout {
+                                Layout.preferredWidth: 85
+                                spacing: 1
                                 Text {
                                     text: modelData.target
                                     font.pixelSize: 11
+                                    font.bold: true
+                                    font.family: "Menlo"
+                                    color: root.accentBlue
+                                    Layout.alignment: Qt.AlignRight
+                                }
+                                Text {
+                                    text: "(" + modelData.base + " " + modelData.shift + ")"
+                                    font.pixelSize: 8
                                     font.family: "Menlo"
                                     color: root.textMuted
-                                    anchors.verticalCenter: parent.verticalCenter
-                                }
-
-                                Rectangle {
-                                    width: 6
-                                    height: 6
-                                    radius: 3
-                                    color: root.accentGreen
-                                    anchors.verticalCenter: parent.verticalCenter
+                                    Layout.alignment: Qt.AlignRight
                                 }
                             }
                         }
                     }
                 }
 
-                // 底部床控制操作区
-                RowLayout {
+                // 底部床控制卡片 (与 Vue3 一致)
+                Rectangle {
                     Layout.fillWidth: true
-                    spacing: 8
+                    implicitHeight: 34
+                    radius: 4
+                    color: "#F8FAFC"
+                    border.color: "#E2E8F0"
 
-                    Text {
-                        text: "床控制"
-                        font.pixelSize: 12
-                        font.bold: true
-                        color: root.textMuted
-                    }
-
-                    Item { Layout.fillWidth: true }
-
-                    Rectangle {
-                        implicitWidth: 64
-                        implicitHeight: 26
-                        radius: 4
-                        color: root.accentLightGreen
-                        border.color: "#A7F3D0"
-
+                    RowLayout {
+                        anchors.fill: parent
+                        anchors.margins: 6
                         Text {
-                            anchors.centerIn: parent
-                            text: "就绪"
-                            font.pixelSize: 12
+                            text: "床控制"
+                            font.pixelSize: 11
                             font.bold: true
-                            color: root.accentGreen
+                            color: root.textMuted
                         }
-
-                        MouseArea {
-                            anchors.fill: parent
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: {
-                                parent.color = "#D1FAE5";
+                        Item { Layout.fillWidth: true }
+                        Rectangle {
+                            implicitWidth: 36
+                            implicitHeight: 20
+                            radius: 3
+                            color: root.couchRemoteMode ? root.accentLightGreen : "#F1F5F9"
+                            border.color: root.couchRemoteMode ? "#A7F3D0" : "#E2E8F0"
+                            Text {
+                                anchors.centerIn: parent
+                                text: root.couchRemoteMode ? "远控" : "就地"
+                                font.pixelSize: 9
+                                font.bold: true
+                                color: root.couchRemoteMode ? "#059669" : root.textMuted
+                            }
+                        }
+                        Rectangle {
+                            implicitWidth: 46
+                            implicitHeight: 22
+                            radius: 3
+                            color: root.accentLightGreen
+                            border.color: "#A7F3D0"
+                            Text {
+                                anchors.centerIn: parent
+                                text: "就绪"
+                                font.pixelSize: 10
+                                font.bold: true
+                                color: root.accentGreen
+                            }
+                            MouseArea {
+                                anchors.fill: parent
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: parent.color = "#D1FAE5"
                             }
                         }
                     }
@@ -253,7 +324,7 @@ Item {
         }
 
         // =====================================================================
-        // 中央核心：12 步环形状态机雷达圆环（The 12-State Circular Orbit）
+        // 中央核心舞台 (workflow-ring-container)
         // =====================================================================
         Rectangle {
             id: orbitContainer
@@ -265,101 +336,106 @@ Item {
             border.width: 1
             clip: true
 
-            readonly property real centerX: width / 2
-            readonly property real centerY: height / 2
-            readonly property real orbitRadius: Math.max(65, Math.min(width * 0.44, height * 0.35))
+            readonly property real cx: width / 2
+            readonly property real cy: height / 2
+            // 依据容器尺寸弹性自适应基准半径
+            readonly property real scaleFactor: Math.min(width / 480, height / 480)
+            readonly property real baseRadius: 182 * scaleFactor
+            readonly property real zoneRadius: 212 * scaleFactor
 
-            // Canvas 绘制平滑的底层轨道与高亮流光弧
+            // 1. 底层 Canvas 绘制外层 5 大宏观分区弧线与主进度弧
             Canvas {
-                id: orbitCanvas
+                id: ringCanvas
                 anchors.fill: parent
 
                 onPaint: {
                     var ctx = getContext("2d");
                     ctx.reset();
 
-                    var cx = orbitContainer.centerX;
-                    var cy = orbitContainer.centerY;
-                    var r = orbitContainer.orbitRadius;
+                    var cx = orbitContainer.cx;
+                    var cy = orbitContainer.cy;
+                    var rMain = orbitContainer.baseRadius;
+                    var rZone = orbitContainer.zoneRadius;
 
-                    // 1. 底层完整静态浅灰轨道环
+                    // 1.1 外层宏观阶段底轨 (r=212)
                     ctx.beginPath();
-                    ctx.arc(cx, cy, r, 0, Math.PI * 2, false);
+                    ctx.arc(cx, cy, rZone, 0, Math.PI * 2, false);
+                    ctx.strokeStyle = "#F1F5F9";
+                    ctx.lineWidth = 3;
+                    ctx.stroke();
+
+                    // 1.2 当前宏观阶段的高亮外弧
+                    var curMacro = root.currentMacroDef();
+                    var startAngle = ((curMacro.startIdx * 30 - 90) * Math.PI) / 180;
+                    var endAngle = (((curMacro.endIdx + 1) * 30 - 90) * Math.PI) / 180;
+                    ctx.beginPath();
+                    ctx.arc(cx, cy, rZone, startAngle, endAngle, false);
+                    ctx.strokeStyle = "#3B82F6";
+                    ctx.lineWidth = 3.5;
+                    ctx.stroke();
+
+                    // 1.3 主进度底轨 (r=182 / 175)
+                    ctx.beginPath();
+                    ctx.arc(cx, cy, rMain, 0, Math.PI * 2, false);
                     ctx.strokeStyle = "#E2E8F0";
                     ctx.lineWidth = 2.5;
                     ctx.stroke();
 
-                    // 2. 当前进度的高亮蓝色弧线 (从第一步 01 延伸到当前步)
-                    var startAngle = -Math.PI / 3; // 01 在 1点钟方向 (-60 deg)
-                    var currentStepAngle = startAngle + (root.currentStepIndex / 12) * Math.PI * 2;
-
+                    // 1.4 高亮进度流光弧 (从 step 0 顺时针延伸至当前 step)
+                    var arcStart = -Math.PI / 2; // 01 在 12点钟 (-90度)
+                    var arcCurrent = arcStart + ((root.currentStepIndex + 0.3) / 12) * Math.PI * 2;
                     ctx.beginPath();
-                    ctx.arc(cx, cy, r, startAngle, currentStepAngle, false);
+                    ctx.arc(cx, cy, rMain, arcStart, arcCurrent, false);
                     ctx.strokeStyle = "#2563EB";
-                    ctx.lineWidth = 4.0;
+                    ctx.lineWidth = 4;
                     ctx.lineCap = "round";
-                    ctx.stroke();
-
-                    // 3. 装饰性内外同心细环
-                    ctx.beginPath();
-                    ctx.arc(cx, cy, r - 26, 0, Math.PI * 2, false);
-                    ctx.strokeStyle = "#F1F5F9";
-                    ctx.lineWidth = 1;
-                    ctx.stroke();
-
-                    ctx.beginPath();
-                    ctx.arc(cx, cy, r + 26, 0, Math.PI * 2, false);
-                    ctx.strokeStyle = "#F8FAFC";
-                    ctx.lineWidth = 1;
                     ctx.stroke();
                 }
 
                 Connections {
                     target: root
-                    function onCurrentStepIndexChanged() { orbitCanvas.requestPaint(); }
+                    function onCurrentStepIndexChanged() { ringCanvas.requestPaint(); }
                 }
-
                 onWidthChanged: requestPaint()
                 onHeightChanged: requestPaint()
             }
 
-            // 12 个沿圆周分布的精致胶囊节点
+            // 2. 12 个时序节点围绕 (cx, cy, baseRadius) 顺时针均匀分布
             Repeater {
-                model: root.workflowSteps
+                model: root.stateMetaList
 
                 Item {
-                    id: nodeItem
+                    id: nodeDelegate
                     required property int index
                     required property var modelData
 
-                    // 角度换算：01 处于 1点钟位置 (-60 deg)，30 度步进
-                    readonly property real angleRad: ((nodeItem.index * 30 - 60) * Math.PI) / 180
-                    readonly property real posX: orbitContainer.centerX + orbitContainer.orbitRadius * Math.cos(angleRad)
-                    readonly property real posY: orbitContainer.centerY + orbitContainer.orbitRadius * Math.sin(angleRad)
+                    // 角度换算：01 处于 12点钟正上方 (-90 deg)，30 度等分
+                    readonly property real angleRad: ((nodeDelegate.index * 30 - 90) * Math.PI) / 180
+                    readonly property real posX: orbitContainer.cx + orbitContainer.baseRadius * Math.cos(angleRad)
+                    readonly property real posY: orbitContainer.cy + orbitContainer.baseRadius * Math.sin(angleRad)
 
-                    readonly property bool isDone: nodeItem.index < root.currentStepIndex
-                    readonly property bool isCurrent: nodeItem.index === root.currentStepIndex
-                    readonly property bool isFuture: nodeItem.index > root.currentStepIndex
+                    readonly property bool isDone: nodeDelegate.index < root.currentStepIndex
+                    readonly property bool isCurrent: nodeDelegate.index === root.currentStepIndex
 
                     x: posX - width / 2
                     y: posY - height / 2
-                    width: nodeCard.width
-                    height: nodeCard.height
+                    width: nodePill.width
+                    height: nodePill.height
 
                     Rectangle {
-                        id: nodeCard
-                        implicitHeight: 28
-                        implicitWidth: nodeContent.width + 16
-                        radius: 14
-                        color: nodeItem.isDone ? "#FFFFFF" :
-                               nodeItem.isCurrent ? "#2563EB" : "#F8FAFC"
-                        border.color: nodeItem.isDone ? "#10B981" :
-                                      nodeItem.isCurrent ? "#1D4ED8" : "#E2E8F0"
-                        border.width: nodeItem.isCurrent ? 2 : 1
+                        id: nodePill
+                        implicitHeight: Math.max(22, Math.min(26, orbitContainer.scaleFactor * 26))
+                        implicitWidth: nodeLayout.width + 12
+                        radius: height / 2
+                        color: nodeDelegate.isDone ? "#FFFFFF" :
+                               nodeDelegate.isCurrent ? "#2563EB" : "#F8FAFC"
+                        border.color: nodeDelegate.isDone ? "#10B981" :
+                                      nodeDelegate.isCurrent ? "#1D4ED8" : "#CBD5E1"
+                        border.width: nodeDelegate.isCurrent ? 2 : 1
 
-                        // 当前活跃状态的呼吸光晕外环
+                        // 当前活跃节点的外圈脉冲光晕
                         Rectangle {
-                            visible: nodeItem.isCurrent
+                            visible: nodeDelegate.isCurrent
                             anchors.fill: parent
                             anchors.margins: -4
                             radius: parent.radius + 4
@@ -367,46 +443,44 @@ Item {
                             border.color: "#93C5FD"
                             border.width: 2
                             opacity: 0.8
-
                             SequentialAnimation on opacity {
                                 loops: Animation.Infinite
-                                running: nodeItem.isCurrent
+                                running: nodeDelegate.isCurrent
                                 NumberAnimation { to: 0.2; duration: 900; easing.type: Easing.InOutQuad }
                                 NumberAnimation { to: 0.9; duration: 900; easing.type: Easing.InOutQuad }
                             }
                         }
 
                         Row {
-                            id: nodeContent
+                            id: nodeLayout
                             anchors.centerIn: parent
-                            spacing: 5
+                            spacing: 4
 
-                            // 状态小圆标
+                            // 序号小圆标
                             Rectangle {
                                 width: 14
                                 height: 14
                                 radius: 7
                                 anchors.verticalCenter: parent.verticalCenter
-                                color: nodeItem.isDone ? "#10B981" :
-                                       nodeItem.isCurrent ? "#FFFFFF" : "#CBD5E1"
-
+                                color: nodeDelegate.isDone ? "#10B981" :
+                                       nodeDelegate.isCurrent ? "#FFFFFF" : "#CBD5E1"
                                 Text {
                                     anchors.centerIn: parent
-                                    text: nodeItem.isDone ? "✓" : (nodeItem.index + 1)
-                                    font.pixelSize: 9
+                                    text: nodeDelegate.isDone ? "✓" : nodeDelegate.modelData.num
+                                    font.pixelSize: 8
                                     font.bold: true
-                                    color: nodeItem.isDone ? "#FFFFFF" :
-                                           nodeItem.isCurrent ? "#2563EB" : "#64748B"
+                                    color: nodeDelegate.isDone ? "#FFFFFF" :
+                                           nodeDelegate.isCurrent ? "#2563EB" : "#475569"
                                 }
                             }
 
-                            // 步骤中文名
+                            // 状态中文名
                             Text {
-                                text: nodeItem.modelData.name
-                                font.pixelSize: 11
-                                font.bold: nodeItem.isCurrent
-                                color: nodeItem.isCurrent ? "#FFFFFF" :
-                                       nodeItem.isDone ? "#059669" : "#475569"
+                                text: nodeDelegate.modelData.cn
+                                font.pixelSize: 10
+                                font.bold: nodeDelegate.isCurrent
+                                color: nodeDelegate.isCurrent ? "#FFFFFF" :
+                                       nodeDelegate.isDone ? "#059669" : "#334155"
                                 anchors.verticalCenter: parent.verticalCenter
                             }
                         }
@@ -415,20 +489,18 @@ Item {
                             anchors.fill: parent
                             cursorShape: Qt.PointingHandCursor
                             onClicked: {
-                                root.currentStepIndex = nodeItem.index;
-                                root.stepSelected(nodeItem.index);
+                                root.currentStepIndex = nodeDelegate.index;
+                                root.stepSelected(nodeDelegate.index);
                             }
                         }
                     }
                 }
             }
 
-            // =================================================================
-            // 环心多层控制仪表盘（Center Control Core）
-            // =================================================================
+            // 3. 环心核心仪表盘 (ring-center-hub)
             Rectangle {
-                id: centerCore
-                width: Math.min(200, Math.max(110, orbitContainer.orbitRadius * 1.15))
+                id: hub
+                width: Math.min(190, Math.max(110, orbitContainer.baseRadius * 1.15))
                 height: width
                 radius: width / 2
                 anchors.centerIn: parent
@@ -436,7 +508,6 @@ Item {
                 border.color: "#E2E8F0"
                 border.width: 1
 
-                // 柔和外圈装饰微环
                 Rectangle {
                     anchors.fill: parent
                     anchors.margins: 6
@@ -448,71 +519,68 @@ Item {
 
                 ColumnLayout {
                     anchors.centerIn: parent
-                    spacing: 4
+                    spacing: 3
 
-                    // 顶部类别标签
+                    // 宏观阶段徽章
                     Rectangle {
                         Layout.alignment: Qt.AlignHCenter
                         implicitHeight: 18
-                        implicitWidth: presetText.width + 12
+                        implicitWidth: hubMacroText.width + 12
                         radius: 9
                         color: root.accentLightBlue
-
                         Text {
-                            id: presetText
+                            id: hubMacroText
                             anchors.centerIn: parent
-                            text: "预置 · PRESET"
+                            text: root.currentMacroDef().title + " · " + root.currentMacroDef().sub
                             font.pixelSize: 9
                             font.bold: true
                             color: root.accentBlue
                         }
                     }
 
-                    // 步骤统计
+                    // STEP 序号与完成度百分比
                     Text {
                         Layout.alignment: Qt.AlignHCenter
-                        text: "STEP " + root.workflowSteps[root.currentStepIndex].num + " / 12 (" + Math.round(((root.currentStepIndex + 1) / 12) * 100) + "%)"
-                        font.pixelSize: 11
+                        text: "STEP " + root.stateMetaList[root.currentStepIndex].num + " / 12 (" + Math.round(((root.currentStepIndex + 1) / 12) * 100) + "%)"
+                        font.pixelSize: 10
                         font.bold: true
                         font.family: "Menlo"
                         color: root.textMuted
                     }
 
-                    // 核心当前状态名称（粗体大字，弹性自适应）
+                    // 核心当前中文状态名 (粗体大字)
                     Text {
                         Layout.alignment: Qt.AlignHCenter
-                        text: root.workflowSteps[root.currentStepIndex].name
-                        font.pixelSize: Math.max(13, Math.min(22, centerCore.width * 0.13))
+                        text: root.stateMetaList[root.currentStepIndex].cn
+                        font.pixelSize: Math.max(14, Math.min(20, hub.width * 0.13))
                         font.bold: true
                         color: root.textMain
                     }
 
-                    // 状态代码药丸
+                    // 英文 FSM 状态代码药丸
                     Rectangle {
                         Layout.alignment: Qt.AlignHCenter
-                        implicitHeight: 20
-                        implicitWidth: codeText.width + 12
-                        radius: 4
+                        implicitHeight: 18
+                        implicitWidth: hubCodeText.width + 10
+                        radius: 3
                         color: "#F1F5F9"
                         border.color: "#CBD5E1"
-                        border.width: 1
-
                         Text {
-                            id: codeText
+                            id: hubCodeText
                             anchors.centerIn: parent
-                            text: "WAITING_OIS_" + root.workflowSteps[root.currentStepIndex].code + "_CONFIRM"
-                            font.pixelSize: 9
+                            text: root.stateMetaList[root.currentStepIndex].key
+                            font.pixelSize: 8
                             font.bold: true
                             font.family: "Menlo"
                             color: root.accentBlue
                         }
                     }
 
-                    // 辅助提示说明
+                    // 辅助状态描述
                     Text {
                         Layout.alignment: Qt.AlignHCenter
-                        text: root.workflowSteps[root.currentStepIndex].desc
-                        font.pixelSize: 10
+                        text: root.stateMetaList[root.currentStepIndex].desc
+                        font.pixelSize: 9
                         color: root.textMuted
                     }
                 }
@@ -520,10 +588,10 @@ Item {
         }
 
         // =====================================================================
-        // 右侧微控制面板：硬件联动微卡片
+        // 右翼面板 (flank-right)：脊形过滤器 + DR + DDS + 13 联锁停机
         // =====================================================================
         Rectangle {
-            Layout.preferredWidth: Math.min(170, Math.max(120, root.width * 0.16))
+            Layout.preferredWidth: Math.min(170, Math.max(130, root.width * 0.17))
             Layout.fillHeight: true
             radius: 8
             color: root.cardBg
@@ -532,177 +600,208 @@ Item {
 
             ColumnLayout {
                 anchors.fill: parent
-                anchors.margins: 12
-                spacing: 10
+                anchors.margins: 10
+                spacing: 8
 
-                // 卡片 1: 楔形过滤器
+                // 1. 脊形过滤器 (Ridge Filter) 移入/移出
                 Rectangle {
                     Layout.fillWidth: true
-                    implicitHeight: 74
-                    radius: 6
+                    implicitHeight: 68
+                    radius: 4
                     color: "#F8FAFC"
                     border.color: "#E2E8F0"
 
                     ColumnLayout {
                         anchors.fill: parent
-                        anchors.margins: 8
-                        spacing: 4
-
-                        Text {
-                            text: "楔形过滤器"
-                            font.pixelSize: 11
-                            font.bold: true
-                            color: root.textMuted
-                        }
-
-                        Rectangle {
-                            Layout.fillWidth: true
-                            implicitHeight: 28
-                            radius: 4
-                            color: "#FFFFFF"
-                            border.color: "#CBD5E1"
-
-                            Text {
-                                anchors.centerIn: parent
-                                text: "✦ 移出"
-                                font.pixelSize: 11
-                                font.bold: true
-                                color: root.textMain
-                            }
-
-                            MouseArea {
-                                anchors.fill: parent
-                                cursorShape: Qt.PointingHandCursor
-                                onClicked: parent.color = "#F1F5F9"
-                            }
-                        }
-                    }
-                }
-
-                // 卡片 2: DR 状态
-                Rectangle {
-                    Layout.fillWidth: true
-                    implicitHeight: 74
-                    radius: 6
-                    color: "#F8FAFC"
-                    border.color: "#E2E8F0"
-
-                    ColumnLayout {
-                        anchors.fill: parent
-                        anchors.margins: 8
-                        spacing: 4
-
-                        Text {
-                            text: "DR状态"
-                            font.pixelSize: 11
-                            font.bold: true
-                            color: root.textMuted
-                        }
-
-                        Rectangle {
-                            Layout.fillWidth: true
-                            implicitHeight: 28
-                            radius: 4
-                            color: root.accentLightBlue
-                            border.color: "#BFDBFE"
-
-                            Text {
-                                anchors.centerIn: parent
-                                text: "✦ 复位到位"
-                                font.pixelSize: 11
-                                font.bold: true
-                                color: root.accentBlue
-                            }
-
-                            MouseArea {
-                                anchors.fill: parent
-                                cursorShape: Qt.PointingHandCursor
-                                onClicked: parent.color = "#DBEAFE"
-                            }
-                        }
-                    }
-                }
-
-                // 卡片 3: DDS 状态
-                Rectangle {
-                    Layout.fillWidth: true
-                    implicitHeight: 80
-                    radius: 6
-                    color: "#F8FAFC"
-                    border.color: "#E2E8F0"
-
-                    ColumnLayout {
-                        anchors.fill: parent
-                        anchors.margins: 8
+                        anchors.margins: 6
                         spacing: 4
 
                         RowLayout {
                             Layout.fillWidth: true
-                            Text {
-                                text: "DDS状态"
-                                font.pixelSize: 11
-                                font.bold: true
-                                color: root.textMuted
-                            }
+                            Text { text: "脊形过滤器"; font.pixelSize: 11; font.bold: true; color: root.textMuted }
                             Item { Layout.fillWidth: true }
                             Rectangle {
                                 implicitWidth: 32
-                                implicitHeight: 18
-                                radius: 4
-                                color: root.accentLightGreen
-                                border.color: "#A7F3D0"
+                                implicitHeight: 16
+                                radius: 3
+                                color: root.ridgeFilterInPosition ? root.accentLightGreen : "#F1F5F9"
+                                border.color: root.ridgeFilterInPosition ? "#A7F3D0" : "#E2E8F0"
                                 Text {
                                     anchors.centerIn: parent
-                                    text: "正常"
-                                    font.pixelSize: 9
+                                    text: root.ridgeFilterInPosition ? "到位" : "移出"
+                                    font.pixelSize: 8
                                     font.bold: true
-                                    color: root.accentGreen
+                                    color: root.ridgeFilterInPosition ? root.accentGreen : root.textMuted
                                 }
                             }
                         }
 
                         Rectangle {
                             Layout.fillWidth: true
-                            implicitHeight: 28
-                            radius: 4
+                            implicitHeight: 24
+                            radius: 3
                             color: "#FFFFFF"
                             border.color: "#CBD5E1"
-
                             Text {
                                 anchors.centerIn: parent
-                                text: "DDS故障复位"
-                                font.pixelSize: 11
+                                text: root.ridgeFilterInPosition ? "✦ 移出" : "✦ 移入"
+                                font.pixelSize: 10
                                 font.bold: true
                                 color: root.textMain
                             }
-
                             MouseArea {
                                 anchors.fill: parent
                                 cursorShape: Qt.PointingHandCursor
-                                onClicked: parent.color = "#F1F5F9"
+                                onClicked: {
+                                    root.ridgeFilterInPosition = !root.ridgeFilterInPosition;
+                                    root.ridgeFilterToggled(root.ridgeFilterInPosition);
+                                }
                             }
                         }
                     }
                 }
 
-                // 卡片 4: 联锁停机指示
+                // 2. DR 状态
                 Rectangle {
                     Layout.fillWidth: true
-                    implicitHeight: 52
-                    radius: 6
+                    implicitHeight: 68
+                    radius: 4
                     color: "#F8FAFC"
                     border.color: "#E2E8F0"
 
+                    ColumnLayout {
+                        anchors.fill: parent
+                        anchors.margins: 6
+                        spacing: 4
+
+                        RowLayout {
+                            Layout.fillWidth: true
+                            Text { text: "DR状态"; font.pixelSize: 11; font.bold: true; color: root.textMuted }
+                            Item { Layout.fillWidth: true }
+                            Rectangle {
+                                implicitWidth: 32
+                                implicitHeight: 16
+                                radius: 3
+                                color: root.drAtWorkPosition ? root.accentLightGreen : "#F1F5F9"
+                                border.color: root.drAtWorkPosition ? "#A7F3D0" : "#E2E8F0"
+                                Text {
+                                    anchors.centerIn: parent
+                                    text: root.drAtWorkPosition ? "就绪" : "待位"
+                                    font.pixelSize: 8
+                                    font.bold: true
+                                    color: root.drAtWorkPosition ? root.accentGreen : root.textMuted
+                                }
+                            }
+                        }
+
+                        Rectangle {
+                            Layout.fillWidth: true
+                            implicitHeight: 24
+                            radius: 3
+                            color: root.accentLightBlue
+                            border.color: "#BFDBFE"
+                            Text {
+                                anchors.centerIn: parent
+                                text: "✦ 复位到位"
+                                font.pixelSize: 10
+                                font.bold: true
+                                color: root.accentBlue
+                            }
+                            MouseArea {
+                                anchors.fill: parent
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: {
+                                    parent.color = "#DBEAFE";
+                                    root.drResetRequested();
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // 3. DDS 状态与故障复位
+                Rectangle {
+                    Layout.fillWidth: true
+                    implicitHeight: 74
+                    radius: 4
+                    color: root.ddsHasFault ? "#FFF1F2" : "#F8FAFC"
+                    border.color: root.ddsHasFault ? "#FECDD3" : "#E2E8F0"
+
+                    ColumnLayout {
+                        anchors.fill: parent
+                        anchors.margins: 6
+                        spacing: 4
+
+                        RowLayout {
+                            Layout.fillWidth: true
+                            Text { text: "DDS状态"; font.pixelSize: 11; font.bold: true; color: root.textMuted }
+                            Item { Layout.fillWidth: true }
+                            Rectangle {
+                                implicitWidth: 32
+                                implicitHeight: 16
+                                radius: 3
+                                color: root.ddsHasFault ? "#FFE4E6" : root.accentLightGreen
+                                border.color: root.ddsHasFault ? "#FDA4AF" : "#A7F3D0"
+                                Text {
+                                    anchors.centerIn: parent
+                                    text: root.ddsHasFault ? "故障" : "正常"
+                                    font.pixelSize: 8
+                                    font.bold: true
+                                    color: root.ddsHasFault ? "#DC2626" : root.accentGreen
+                                }
+                            }
+                        }
+
+                        Rectangle {
+                            Layout.fillWidth: true
+                            implicitHeight: 24
+                            radius: 3
+                            color: "#FFFFFF"
+                            border.color: root.ddsHasFault ? "#F87171" : "#CBD5E1"
+                            Text {
+                                anchors.centerIn: parent
+                                text: "DDS故障复位"
+                                font.pixelSize: 10
+                                font.bold: true
+                                color: root.ddsHasFault ? "#DC2626" : root.textMain
+                            }
+                            MouseArea {
+                                anchors.fill: parent
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: {
+                                    root.ddsHasFault = false;
+                                    root.ddsResetRequested();
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // 4. 13 联锁保护停机状态指示 (与 Vue3 一模一样)
+                Rectangle {
+                    Layout.fillWidth: true
+                    implicitHeight: 46
+                    radius: 4
+                    color: root.isErrorStopped ? "#FFF1F2" : "#F8FAFC"
+                    border.color: root.isErrorStopped ? "#FDA4AF" : "#E2E8F0"
+
                     RowLayout {
                         anchors.fill: parent
-                        anchors.margins: 8
+                        anchors.margins: 6
                         spacing: 6
 
                         Rectangle {
-                            width: 10
-                            height: 10
-                            radius: 5
-                            color: root.accentGreen
+                            width: 18
+                            height: 18
+                            radius: 9
+                            color: root.isErrorStopped ? "#EF4444" : "#10B981"
+                            Text {
+                                anchors.centerIn: parent
+                                text: "13"
+                                font.pixelSize: 8
+                                font.bold: true
+                                color: "#FFFFFF"
+                            }
                         }
 
                         ColumnLayout {
@@ -711,11 +810,11 @@ Item {
                                 text: "联锁停机"
                                 font.pixelSize: 11
                                 font.bold: true
-                                color: root.textMain
+                                color: root.isErrorStopped ? "#DC2626" : root.textMain
                             }
                             Text {
-                                text: "USER_STOPPED"
-                                font.pixelSize: 9
+                                text: root.isErrorStopped ? "ERROR_STOPPED" : "NORMAL"
+                                font.pixelSize: 8
                                 font.family: "Menlo"
                                 color: root.textMuted
                             }

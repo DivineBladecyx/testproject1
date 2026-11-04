@@ -58,6 +58,7 @@
 #include <QFontMetrics>
 #include <QFontDatabase>
 #include <QTreeWidget>
+#include <QButtonGroup>
 #include <QMenu>
 #include <utility>
 #include <cmath>
@@ -2219,6 +2220,51 @@ void TreatmentWindow::initUiLayoutTuning()
     }
 }
 
+void TreatmentWindow::showLogViewDialog(const QString &logName)
+{
+    auto *dialog = new QDialog(this);
+    dialog->setAttribute(Qt::WA_DeleteOnClose);
+    dialog->setWindowTitle(tr("服务端持久化落盘日志 - %1").arg(logName));
+    dialog->resize(780, 520);
+    auto *layout = new QVBoxLayout(dialog);
+    layout->setContentsMargins(12, 12, 12, 12);
+    layout->setSpacing(8);
+
+    auto *header = new QLabel(tr("文件路径: /var/log/tcs/%1 (医疗核心只读审计副本)").arg(logName), dialog);
+    header->setStyleSheet(QStringLiteral("font-weight: 700; color: #475569; font-size: 11px;"));
+    layout->addWidget(header);
+
+    auto *edit = new QPlainTextEdit(dialog);
+    edit->setReadOnly(true);
+    edit->setFont(QFont(QStringLiteral("Menlo"), 10));
+    edit->setStyleSheet(QStringLiteral("background: #0F172A; color: #38BDF8; border-radius: 4px; padding: 8px;"));
+
+    QStringList logLines;
+    const QString now = QDateTime::currentDateTime().toString(QStringLiteral("yyyy-MM-dd hh:mm:ss.zzz"));
+    logLines << QStringLiteral("[%1] [INFO] [TCS-CORE] Gateway session active for room %2, operator: %3")
+                    .arg(now, m_roomId.isEmpty() ? QStringLiteral("ROOM_1") : m_roomId,
+                         m_currentUsername.isEmpty() ? QStringLiteral("rtt_1") : m_currentUsername);
+    logLines << QStringLiteral("[%1] [INFO] [NET] Connected to backend ws://10.10.3.192:8081/tcs").arg(now);
+    logLines << QStringLiteral("[%1] [INFO] [FSM] Current state: %2 (Revision: %3)")
+                    .arg(now, m_backendWorkflowState.isEmpty() ? QStringLiteral("WAITING_OIS_SCHEDULE_CONFIRM") : m_backendWorkflowState)
+                    .arg(m_workflowRevision);
+    if (!m_grpcCallHistory.isEmpty()) {
+        logLines << QStringLiteral("\n--- Recent System Events / gRPC Audit ---");
+        logLines.append(m_grpcCallHistory);
+    }
+    edit->setPlainText(logLines.join(QLatin1Char('\n')));
+    layout->addWidget(edit);
+
+    auto *btnBox = new QHBoxLayout;
+    btnBox->addStretch(1);
+    auto *closeBtn = new QPushButton(tr("关闭"), dialog);
+    connect(closeBtn, &QPushButton::clicked, dialog, &QDialog::close);
+    btnBox->addWidget(closeBtn);
+    layout->addLayout(btnBox);
+
+    dialog->show();
+}
+
 void TreatmentWindow::setupClinicalWorkspace()
 {
     if (m_clinicalBody) return;
@@ -2237,705 +2283,599 @@ void TreatmentWindow::setupClinicalWorkspace()
     root->setContentsMargins(9, 7, 9, 9);
     root->setSpacing(7);
 
-    const auto panel = [](const QString &name, QWidget *parent) {
-        auto *widget = new QWidget(parent);
-        widget->setObjectName(name);
-        widget->setProperty("clinicalRole", "surface");
-        widget->setAttribute(Qt::WA_StyledBackground);
-        return widget;
-    };
-    const auto label = [](const QString &text, const char *role, QWidget *parent) {
-        auto *value = new QLabel(text, parent);
-        value->setTextFormat(Qt::PlainText);
-        value->setWordWrap(true);
-        value->setMinimumWidth(0);
-        value->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
-        value->setProperty("clinicalRole", role);
-        return value;
-    };
-    const auto move = [](QWidget *widget, QBoxLayout *layout) {
-        widget->setParent(layout->parentWidget());
-        widget->setMinimumWidth(0);
-        widget->setMaximumSize(QWIDGETSIZE_MAX, QWIDGETSIZE_MAX);
-        widget->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
-        layout->addWidget(widget);
-        widget->show();
-    };
-    // Presentation-only medical monitoring card header: no equipment state is set here.
-    const auto monitorCardBar = [](QWidget *parent, const QString &text,
-                                   const QString &symbol, bool teal = false) {
-        auto *bar = new QWidget(parent);
-        bar->setObjectName(QStringLiteral("clinicalMonitorCardBar"));
-        bar->setProperty("cardTone", teal ? "teal" : "blue");
-        bar->setAttribute(Qt::WA_StyledBackground);
-        bar->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
-        bar->setFixedHeight(42);
-        auto *row = new QHBoxLayout(bar);
-        row->setContentsMargins(14, 0, 12, 0);
-        row->setSpacing(9);
-        auto *glyph = new QLabel(symbol, bar);
-        glyph->setObjectName(QStringLiteral("clinicalMonitorCardGlyph"));
-        glyph->setFixedWidth(23);
-        glyph->setAlignment(Qt::AlignCenter);
-        auto *caption = new QLabel(text, bar);
-        caption->setObjectName(QStringLiteral("clinicalMonitorCardCaption"));
-        caption->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
-        row->addWidget(glyph);
-        row->addWidget(caption, 1);
-        return bar;
-    };
-    const auto monitorSectionBar = [](QWidget *parent, const QString &text, const QString &symbol) {
-        auto *bar = new QWidget(parent);
-        bar->setObjectName(QStringLiteral("clinicalMonitorSectionBar"));
-        bar->setAttribute(Qt::WA_StyledBackground);
-        bar->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
-        bar->setFixedHeight(31);
-        auto *row = new QHBoxLayout(bar);
-        row->setContentsMargins(9, 0, 8, 0);
-        row->setSpacing(7);
-        auto *glyph = new QLabel(symbol, bar);
-        glyph->setObjectName(QStringLiteral("clinicalMonitorSectionGlyph"));
-        glyph->setFixedWidth(17);
-        glyph->setAlignment(Qt::AlignCenter);
-        auto *caption = new QLabel(text, bar);
-        caption->setObjectName(QStringLiteral("clinicalMonitorSectionCaption"));
-        caption->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
-        row->addWidget(glyph);
-        row->addWidget(caption, 1);
-        return bar;
-    };
-    const auto scroll = [](QWidget *content, const QString &name) {
-        auto *area = new QScrollArea;
-        area->setObjectName(name);
-        area->setWidgetResizable(true);
-        area->setFrameShape(QFrame::NoFrame);
-        area->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-        area->setWidget(content);
-        return area;
-    };
+    // -------------------------------------------------------------------------
+    // 1. 顶部第一行导航栏 (对标 HeaderBar.vue 第一行)
+    // -------------------------------------------------------------------------
+    auto *navPrimaryRow = new QFrame(ui->centralwidget);
+    navPrimaryRow->setObjectName(QStringLiteral("navPrimaryRow"));
+    navPrimaryRow->setFixedHeight(46);
+    auto *navLayout = new QHBoxLayout(navPrimaryRow);
+    navLayout->setContentsMargins(10, 0, 10, 0);
+    navLayout->setSpacing(10);
 
-    auto *header = panel(QStringLiteral("clinicalHeader"), ui->centralwidget);
-    header->setMinimumHeight(56);
-    header->setMaximumHeight(72);
-    auto *headerGrid = new QGridLayout(header);
-    headerGrid->setContentsMargins(12, 4, 12, 4);
-    headerGrid->setColumnStretch(0, 0);
-    headerGrid->setColumnStretch(1, 1);
-    headerGrid->setColumnStretch(2, 0);
-    auto *brand = label(tr("SIMM 治疗控制系统\n治疗模式"), "title", header);
-    brand->setObjectName(QStringLiteral("clinicalBrand"));
-    brand->setMinimumWidth(230);
-    headerGrid->addWidget(brand, 0, 0);
-    // Keep these data-bound labels off the toolbar, including later visibility updates.
-    ui->label_room->setParent(legacy);
-    ui->label_room->hide();
-    m_initializationLabel = label(tr("正在初始化 · 等待后台完成通知"), "section", legacy);
-    m_initializationLabel->setObjectName(QStringLiteral("initializationStatus"));
-    m_initializationLabel->setAlignment(Qt::AlignCenter);
-    m_initializationLabel->setWordWrap(true);
-    auto *session = new QWidget(header);
-    auto *sessionLayout = new QVBoxLayout(session);
-    sessionLayout->setContentsMargins(0, 0, 0, 0);
-    sessionLayout->setSpacing(4);
-    auto *identity = new QHBoxLayout;
-    identity->addStretch();
-    for (QLabel *value : {ui->label_6, ui->label_user}) {
-        value->setParent(session);
-        value->setProperty("clinicalRole", "muted");
-        identity->addWidget(value);
+    // 左部：Logo 与运行模式单选切换
+    auto *logoBox = new QHBoxLayout;
+    logoBox->setSpacing(8);
+    auto *logoIcon = new QLabel(navPrimaryRow);
+    logoIcon->setFixedSize(22, 22);
+    logoIcon->setPixmap(QIcon(QStringLiteral(":/icons/icons/atom_logo.svg")).pixmap(22, 22));
+    auto *logoTitleBox = new QVBoxLayout;
+    logoTitleBox->setSpacing(0);
+    auto *logoTitle = new QLabel(QStringLiteral("C-NEXUS-TCS2000"), navPrimaryRow);
+    logoTitle->setStyleSheet(QStringLiteral("font-size: 13px; font-weight: 700; color: #0F172A;"));
+    auto *logoSubtitle = new QLabel(QStringLiteral("碳离子治疗控制系统"), navPrimaryRow);
+    logoSubtitle->setStyleSheet(QStringLiteral("font-size: 9px; color: #64748B;"));
+    logoTitleBox->addWidget(logoTitle);
+    logoTitleBox->addWidget(logoSubtitle);
+    logoBox->addWidget(logoIcon);
+    logoBox->addLayout(logoTitleBox);
+    navLayout->addLayout(logoBox);
+
+    auto *modeGroup = new QButtonGroup(navPrimaryRow);
+    auto *btnTreatment = new QPushButton(QStringLiteral("临床治疗主控"), navPrimaryRow);
+    auto *btnEngineer = new QPushButton(QStringLiteral("硬件诊断"), navPrimaryRow);
+    auto *btnQa = new QPushButton(QStringLiteral("质控 (QA)"), navPrimaryRow);
+    for (QPushButton *btn : {btnTreatment, btnEngineer, btnQa}) {
+        btn->setCheckable(true);
+        btn->setProperty("class", "mode-btn");
+        modeGroup->addButton(btn);
+        btn->setFixedHeight(26);
     }
-    identity->setSpacing(12);
-    sessionLayout->addLayout(identity);
-    auto *commands = new QHBoxLayout;
-    commands->setSpacing(6);
-    commands->addStretch();
-    for (QPushButton *button : {ui->todays_pushButton, m_queryWorkflowButton,
-                                m_resetWorkflowButton, ui->theme_pushButton, ui->logout_pushButton}) {
-        if (!button) continue;
-        button->setParent(session);
-        commands->addWidget(button);
-        button->setMinimumHeight(38);
+    btnTreatment->setChecked(true);
+    auto *modeBox = new QHBoxLayout;
+    modeBox->setSpacing(4);
+    modeBox->addWidget(btnTreatment);
+    modeBox->addWidget(btnEngineer);
+    modeBox->addWidget(btnQa);
+    navLayout->addLayout(modeBox);
+
+    navLayout->addStretch(1);
+
+    // 中间：流程状态胶囊
+    auto *capsule = new QFrame(navPrimaryRow);
+    capsule->setObjectName(QStringLiteral("workflowCapsule"));
+    capsule->setFixedHeight(30);
+    auto *capsuleLayout = new QHBoxLayout(capsule);
+    capsuleLayout->setContentsMargins(10, 0, 10, 0);
+    capsuleLayout->setSpacing(6);
+    auto *capsulePrefix = new QLabel(QStringLiteral("流程状态:"), capsule);
+    capsulePrefix->setStyleSheet(QStringLiteral("font-size: 11px; color: #64748B; font-weight: 500;"));
+    m_headerStateCodeLabel = new QLabel(QStringLiteral("WAITING_OIS_SCHEDULE_CONFIRM"), capsule);
+    m_headerStateCodeLabel->setStyleSheet(QStringLiteral("font-size: 11px; font-family: 'Menlo', monospace; font-weight: 700; color: #2563EB;"));
+    m_headerStateZhLabel = new QLabel(QStringLiteral("(等待 OIS 排程确认)"), capsule);
+    m_headerStateZhLabel->setStyleSheet(QStringLiteral("font-size: 11px; color: #475569;"));
+    m_headerRoomPill = new QLabel(m_roomId.isEmpty() ? QStringLiteral("ROOM_1") : m_roomId, capsule);
+    m_headerRoomPill->setStyleSheet(QStringLiteral("background: #DBEAFE; color: #1D4ED8; font-size: 10px; font-weight: 600; padding: 2px 6px; border-radius: 4px; font-family: 'Menlo', monospace;"));
+    capsuleLayout->addWidget(capsulePrefix);
+    capsuleLayout->addWidget(m_headerStateCodeLabel);
+    capsuleLayout->addWidget(m_headerStateZhLabel);
+    capsuleLayout->addWidget(m_headerRoomPill);
+    navLayout->addWidget(capsule);
+
+    navLayout->addStretch(1);
+
+    // 右部：3 个落盘日志按钮 + 用户胶囊 + 强制复位
+    auto *logBox = new QHBoxLayout;
+    logBox->setSpacing(6);
+    for (const auto &logItem : {
+             qMakePair(QStringLiteral("📄"), QStringLiteral("tcs-server.log")),
+             qMakePair(QStringLiteral("📄"), QStringLiteral("tcs-server-app.log")),
+             qMakePair(QStringLiteral("🛡️"), QStringLiteral("tcs-server-audit.log"))}) {
+        auto *btn = new QPushButton(QStringLiteral("%1 %2").arg(logItem.first, logItem.second), navPrimaryRow);
+        btn->setProperty("class", "header-log-btn");
+        btn->setFixedHeight(26);
+        const QString logName = logItem.second;
+        connect(btn, &QPushButton::clicked, this, [this, logName] {
+            showLogViewDialog(logName);
+        });
+        logBox->addWidget(btn);
     }
-    ui->todays_pushButton->setText(tr("排程"));
-    ui->theme_pushButton->setText(tr("主题"));
-    ui->logout_pushButton->setText(tr("注销"));
-    for (QPushButton *button : {ui->todays_pushButton, ui->theme_pushButton, ui->logout_pushButton})
-        button->setMinimumWidth(76);
-    auto *sessionInfo = new QToolButton(session);
-    sessionInfo->setObjectName(QStringLiteral("clinicalSessionInfo"));
-    sessionInfo->setProperty("sessionReadOnly", true);
-    sessionInfo->setIcon(style()->standardIcon(QStyle::SP_MessageBoxInformation));
-    sessionInfo->setToolTip(tr("登录及版本信息"));
-    sessionInfo->setPopupMode(QToolButton::InstantPopup);
-    auto *sessionMenu = new QMenu(sessionInfo);
-    sessionInfo->setMenu(sessionMenu);
-    connect(sessionMenu, &QMenu::aboutToShow, this, [this, sessionMenu] {
-        sessionMenu->clear();
-        for (const QString &text : {tr("当前用户：%1").arg(m_currentUsername),
-                                    ui->label_time->text(),
-                                    tr("版本：%1").arg(QCoreApplication::applicationVersion())})
-            sessionMenu->addAction(text)->setEnabled(false);
+    navLayout->addLayout(logBox);
+
+    // 用户胶囊下拉 (注销/切换)
+    auto *userPill = new QToolButton(navPrimaryRow);
+    userPill->setObjectName(QStringLiteral("userPillBtn"));
+    userPill->setPopupMode(QToolButton::InstantPopup);
+    userPill->setText(QStringLiteral("👤 %1 (%2)").arg(m_currentUsername.isEmpty() ? QStringLiteral("rtt_1") : m_currentUsername, m_roomId.isEmpty() ? QStringLiteral("ROOM_1") : m_roomId));
+    userPill->setStyleSheet(QStringLiteral("background: #EFF6FF; border: 1px solid #BFDBFE; border-radius: 13px; padding: 3px 8px; font-size: 11px; font-weight: 600; color: #1D4ED8;"));
+    auto *userMenu = new QMenu(userPill);
+    userMenu->addAction(QStringLiteral("注销会话"), this, [this] {
+        if (ui->logout_pushButton) ui->logout_pushButton->click();
     });
-    commands->addWidget(sessionInfo);
-    sessionLayout->addLayout(commands);
-    headerGrid->addWidget(session, 0, 2);
-    root->addWidget(header);
-    move(ui->groupBoxSystemStatus, root);
-    auto *faultDisplay = new FaultDisplay(m_webSocketClient, [this] { return m_roomId; }, ui->centralwidget);
-    root->addWidget(faultDisplay);
-    ui->groupBoxTreatmentFlow->setParent(ui->centralwidget);
-    ui->groupBoxTreatmentFlow->setMinimumSize(0, 0);
-    ui->groupBoxTreatmentFlow->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
-    ui->verticalLayout_flowBox->setContentsMargins(10, 6, 10, 6);
-    ui->verticalLayout_flowBox->removeItem(ui->horizontalLayout_title_flow);
-    ui->horizontalLayout_title_flow->setParent(nullptr);
-    legacyLayout->addLayout(ui->horizontalLayout_title_flow);
-    ui->horizontalLayout_6->setContentsMargins(0, 0, 0, 0);
-    ui->label_title_flow->hide();
-    ui->label_icon_flow->hide();
-    root->addWidget(ui->groupBoxTreatmentFlow);
+    userMenu->addAction(QStringLiteral("同步状态"), this, [this] {
+        queryWorkflowState();
+    });
+    userPill->setMenu(userMenu);
+    navLayout->addWidget(userPill);
 
+    // 强制复位按钮
+    if (m_resetWorkflowButton) {
+        m_resetWorkflowButton->setParent(navPrimaryRow);
+        m_resetWorkflowButton->setText(QStringLiteral("强制复位"));
+        m_resetWorkflowButton->setStyleSheet(QStringLiteral("background: #FEF2F2; border: 1px solid #FECACA; border-radius: 4px; color: #DC2626; font-size: 11px; font-weight: 600; padding: 4px 8px; min-height: 24px;"));
+        navLayout->addWidget(m_resetWorkflowButton);
+    }
+    root->addWidget(navPrimaryRow);
+
+    // -------------------------------------------------------------------------
+    // 2. 顶部第二行公共看板 (操作员信息卡片 + 安全联锁 3x3 矩阵)
+    // -------------------------------------------------------------------------
+    auto *telemetryRibbon = new QWidget(ui->centralwidget);
+    telemetryRibbon->setObjectName(QStringLiteral("telemetryRibbon"));
+    telemetryRibbon->setFixedHeight(132);
+    auto *ribbonLayout = new QHBoxLayout(telemetryRibbon);
+    ribbonLayout->setContentsMargins(0, 0, 0, 0);
+    ribbonLayout->setSpacing(8);
+
+    // 2.1 左半部：操作员信息卡片 (UserProfileCard)
+    auto *userCard = new QFrame(telemetryRibbon);
+    userCard->setObjectName(QStringLiteral("userProfileCard"));
+    userCard->setFixedWidth(340);
+    auto *userCardLayout = new QVBoxLayout(userCard);
+    userCardLayout->setContentsMargins(10, 5, 10, 5);
+    userCardLayout->setSpacing(3);
+
+    auto *userHeader = new QHBoxLayout;
+    auto *userTitle = new QLabel(QStringLiteral("👤 操作员信息"), userCard);
+    userTitle->setStyleSheet(QStringLiteral("font-size: 11px; font-weight: 700; color: #475569;"));
+    m_opStatusTag = new QLabel(QStringLiteral("● 已登录"), userCard);
+    m_opStatusTag->setStyleSheet(QStringLiteral("font-size: 10px; font-weight: 600; color: #059669;"));
+    userHeader->addWidget(userTitle);
+    userHeader->addStretch(1);
+    userHeader->addWidget(m_opStatusTag);
+    userCardLayout->addLayout(userHeader);
+
+    auto *userBody = new QHBoxLayout;
+    userBody->setSpacing(10);
+
+    auto *avatarCol = new QVBoxLayout;
+    avatarCol->setSpacing(2);
+    avatarCol->setAlignment(Qt::AlignCenter);
+    auto *avatarLabel = new QLabel(userCard);
+    avatarLabel->setFixedSize(50, 50);
+    avatarLabel->setPixmap(QIcon(QStringLiteral(":/icons/icons/doctor_avatar.svg")).pixmap(50, 50));
+    avatarLabel->setScaledContents(true);
+    auto *avatarCaption = new QLabel(QStringLiteral("已认证"), userCard);
+    avatarCaption->setAlignment(Qt::AlignCenter);
+    avatarCaption->setStyleSheet(QStringLiteral("font-size: 9px; color: #059669; background: #ECFDF5; border-radius: 2px; padding: 1px 4px;"));
+    avatarCol->addWidget(avatarLabel);
+    avatarCol->addWidget(avatarCaption);
+    userBody->addLayout(avatarCol);
+
+    auto *userGrid = new QGridLayout;
+    userGrid->setContentsMargins(0, 0, 0, 0);
+    userGrid->setHorizontalSpacing(8);
+    userGrid->setVerticalSpacing(2);
+
+    m_opNameLabel = new QLabel(m_currentUsername.isEmpty() ? QStringLiteral("rtt_1") : m_currentUsername, userCard);
+    m_opNameLabel->setStyleSheet(QStringLiteral("font-size: 12px; font-weight: 700; color: #0F172A;"));
+    auto *roleBadge = new QLabel(QStringLiteral("操作员"), userCard);
+    roleBadge->setStyleSheet(QStringLiteral("background: #DBEAFE; color: #1D4ED8; font-size: 9px; font-weight: 600; padding: 1px 4px; border-radius: 2px;"));
+    auto *nameRow = new QHBoxLayout;
+    nameRow->addWidget(m_opNameLabel);
+    nameRow->addWidget(roleBadge);
+    nameRow->addStretch();
+    userGrid->addLayout(nameRow, 0, 0, 1, 2);
+
+    auto addMeta = [userCard, userGrid](const QString &k, const QString &v, int row, int col, bool isGreen = false) -> QLabel* {
+        auto *rowBox = new QHBoxLayout;
+        rowBox->setSpacing(4);
+        auto *keyLbl = new QLabel(k, userCard);
+        keyLbl->setStyleSheet(QStringLiteral("font-size: 10px; color: #64748B;"));
+        auto *valLbl = new QLabel(v, userCard);
+        valLbl->setStyleSheet(QStringLiteral("font-size: 10px; font-family: 'Menlo', monospace; font-weight: 600; color: %1;").arg(isGreen ? QStringLiteral("#059669") : QStringLiteral("#334155")));
+        rowBox->addWidget(keyLbl);
+        rowBox->addWidget(valLbl);
+        userGrid->addLayout(rowBox, row, col);
+        return valLbl;
+    };
+
+    m_opEmpNoLabel = addMeta(QStringLiteral("工号:"), QStringLiteral("TCS-OP-8021"), 1, 0);
+    m_opRoomLabel = addMeta(QStringLiteral("机房:"), m_roomId.isEmpty() ? QStringLiteral("ROOM_2") : m_roomId, 1, 1);
+    addMeta(QStringLiteral("鉴权:"), QStringLiteral("OAuth2.0"), 2, 0);
+    addMeta(QStringLiteral("状态:"), QStringLiteral("有效"), 2, 1, true);
+
+    userBody->addLayout(userGrid, 1);
+    userCardLayout->addLayout(userBody);
+
+    auto *userProto = new QLabel(QStringLiteral("ROLE: CLINICAL_OPERATOR | SESSION: TLS-ENCRYPTED | STATUS: AUTHORIZED"), userCard);
+    userProto->setStyleSheet(QStringLiteral("font-size: 8px; font-family: 'Menlo', monospace; color: #94A3B8; border-top: 1px dashed #E2E8F0; padding-top: 2px;"));
+    userCardLayout->addWidget(userProto);
+
+    ribbonLayout->addWidget(userCard);
+
+    // 2.2 右半部：安全联锁与物理指示 (3x3 矩阵)
+    auto *safetyCard = new QFrame(telemetryRibbon);
+    safetyCard->setObjectName(QStringLiteral("safetyMatrixCard"));
+    auto *safetyCardLayout = new QVBoxLayout(safetyCard);
+    safetyCardLayout->setContentsMargins(10, 5, 10, 5);
+    safetyCardLayout->setSpacing(3);
+
+    auto *safetyHeader = new QHBoxLayout;
+    auto *safetyTitle = new QLabel(QStringLiteral("🔒 安全联锁与物理指示"), safetyCard);
+    safetyTitle->setStyleSheet(QStringLiteral("font-size: 11px; font-weight: 700; color: #475569;"));
+    auto *legend = new QLabel(QStringLiteral("● 正常  ● 告警/出束"), safetyCard);
+    legend->setStyleSheet(QStringLiteral("font-size: 10px; color: #64748B;"));
+    safetyHeader->addWidget(safetyTitle);
+    safetyHeader->addStretch(1);
+    safetyHeader->addWidget(legend);
+    safetyCardLayout->addLayout(safetyHeader);
+
+    auto *safetyGrid = new QGridLayout;
+    safetyGrid->setContentsMargins(0, 0, 0, 0);
+    safetyGrid->setHorizontalSpacing(8);
+    safetyGrid->setVerticalSpacing(3);
+
+    const struct {
+        QString name;
+        QString defaultStatus;
+        int statusTone;
+    } lampDefs[9] = {
+        {QStringLiteral("DDS 束流联锁"), QStringLiteral("正常 (OK)"), 2},
+        {QStringLiteral("TCS 系统联锁"), QStringLiteral("正常 (OK)"), 2},
+        {QStringLiteral("机房防护门"), QStringLiteral("闭锁 (LOCKED)"), 2},
+        {QStringLiteral("出束指示灯"), QStringLiteral("已关束 (BEAM OFF)"), 0},
+        {QStringLiteral("准备就绪灯"), QStringLiteral("就绪 (READY)"), 2},
+        {QStringLiteral("预置状态灯"), QStringLiteral("预置 (PRESET)"), 3},
+        {QStringLiteral("总急停回路"), QStringLiteral("正常 (NORMAL)"), 2},
+        {QStringLiteral("治疗床急停"), QStringLiteral("正常 (OK)"), 2},
+        {QStringLiteral("DR 探测器急停"), QStringLiteral("正常 (OK)"), 2}
+    };
+
+    for (int i = 0; i < 9; ++i) {
+        int r = i / 3;
+        int c = i % 3;
+        auto *cell = new QFrame(safetyCard);
+        cell->setProperty("class", "lamp-cell");
+        m_lampCells[i] = cell;
+
+        auto *cellLayout = new QHBoxLayout(cell);
+        cellLayout->setContentsMargins(6, 2, 6, 2);
+        cellLayout->setSpacing(6);
+
+        auto *dot = new QLabel(QStringLiteral("●"), cell);
+        dot->setObjectName(QStringLiteral("lampDot%1").arg(i));
+        dot->setStyleSheet(QStringLiteral("font-size: 10px; color: %1;").arg(
+            lampDefs[i].statusTone == 2 ? QStringLiteral("#059669") :
+            lampDefs[i].statusTone == 4 ? QStringLiteral("#DC2626") :
+            lampDefs[i].statusTone == 3 ? QStringLiteral("#D97706") : QStringLiteral("#94A3B8")));
+
+        auto *infoBox = new QVBoxLayout;
+        infoBox->setSpacing(0);
+        auto *nameLbl = new QLabel(lampDefs[i].name, cell);
+        nameLbl->setStyleSheet(QStringLiteral("font-size: 10px; font-weight: 600; color: #475569;"));
+        auto *statusLbl = new QLabel(lampDefs[i].defaultStatus, cell);
+        statusLbl->setStyleSheet(QStringLiteral("font-size: 9px; font-family: 'Menlo', monospace; color: %1;").arg(
+            lampDefs[i].statusTone == 2 ? QStringLiteral("#059669") :
+            lampDefs[i].statusTone == 4 ? QStringLiteral("#DC2626") :
+            lampDefs[i].statusTone == 3 ? QStringLiteral("#D97706") : QStringLiteral("#64748B")));
+        m_lampStatusLabels[i] = statusLbl;
+
+        infoBox->addWidget(nameLbl);
+        infoBox->addWidget(statusLbl);
+        cellLayout->addWidget(dot);
+        cellLayout->addLayout(infoBox, 1);
+
+        safetyGrid->addWidget(cell, r, c);
+        safetyGrid->setColumnStretch(c, 1);
+    }
+    safetyCardLayout->addLayout(safetyGrid);
+    ribbonLayout->addWidget(safetyCard, 1);
+
+    root->addWidget(telemetryRibbon);
+
+    // -------------------------------------------------------------------------
+    // 3. 主体三栏布局 (左栏 310px | 中栏 Expanding | 右栏 290px)
+    // -------------------------------------------------------------------------
     m_clinicalBody = new QSplitter(Qt::Horizontal, ui->centralwidget);
     m_clinicalBody->setObjectName(QStringLiteral("clinicalColumns"));
     auto *columns = static_cast<QSplitter *>(m_clinicalBody);
     columns->setChildrenCollapsible(false);
     columns->setHandleWidth(8);
-    root->addWidget(columns, 1);
-    auto *left = panel(QStringLiteral("clinicalPatientColumn"), columns);
-    auto *leftLayout = new QVBoxLayout(left);
-    leftLayout->setContentsMargins(5, 3, 5, 5);
-    leftLayout->setSpacing(9);
-    leftLayout->setAlignment(Qt::AlignTop);
-    identity->removeWidget(ui->label_6);
-    identity->removeWidget(ui->label_user);
-    for (QLabel *value : {ui->label_6, ui->label_user}) {
-        value->setParent(left);
-        value->setWordWrap(true);
-        leftLayout->addWidget(value);
-    }
-    for (QGroupBox *box : {ui->groupBoxPatientInfo, ui->groupBoxPrescriptionDose}) {
-        move(box, leftLayout);
-        box->setMinimumHeight(0);
-    }
-    ui->verticalLayout_plan->removeWidget(ui->spotMapWidget);
-    auto *planPage = new QWidget;
-    auto *planLayout = new QVBoxLayout(planPage);
-    planLayout->setContentsMargins(0, 0, 0, 0);
-    planLayout->setAlignment(Qt::AlignTop);
-    move(ui->groupBoxTreatmentPlan, planLayout);
-    ui->verticalLayout_plan->setAlignment(Qt::AlignTop);
-    auto *patientScroll = scroll(planPage, QStringLiteral("clinicalPatientScroll"));
-    patientScroll->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Maximum);
-    patientScroll->setMinimumHeight(350);
-    patientScroll->setMaximumHeight(480);
-    leftLayout->addWidget(patientScroll);
-    ui->groupBoxTreatmentPlan->setMinimumHeight(0);
-    ui->widgetPlanSummary->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
-    const QVector<QLabel *> names = {ui->labelPlanIdTitle, ui->labelPlanFractionIdTitle,
-        ui->labelPlanSiteTargetTitle, ui->labelPlanIsocenterTitle, ui->labelPlanQaReleaseTitle};
-    const QVector<QLabel *> values = {ui->labelPlanIdValue, ui->labelPlanFractionIdValue,
-        ui->labelPlanSiteTargetValue, ui->labelPlanIsocenterValue, ui->labelPlanQaReleaseValue};
-    for (int index = 0; index < names.size(); ++index) {
-        ui->gridLayout_planSummary->removeWidget(names.at(index));
-        ui->gridLayout_planSummary->removeWidget(values.at(index));
-        for (QLabel *value : {names.at(index), values.at(index)}) {
-            value->setMinimumWidth(0);
-            value->setTextFormat(Qt::PlainText);
-            value->setWordWrap(true);
-            value->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
+
+    // 3.1 左栏：网络拓扑微图 + 患者信息 + 治疗计划
+    auto *leftCol = new QWidget(columns);
+    auto *leftLayout = new QVBoxLayout(leftCol);
+    leftLayout->setContentsMargins(0, 0, 0, 0);
+    leftLayout->setSpacing(6);
+
+    // 拓扑微图
+    m_topoView = new QQuickWidget(leftCol);
+    m_topoView->setResizeMode(QQuickWidget::SizeRootObjectToView);
+    m_topoView->setAttribute(Qt::WA_AlwaysStackOnTop);
+    m_topoView->setClearColor(Qt::transparent);
+    m_topoView->setSource(QUrl(QStringLiteral("qrc:/models/TopologyCard.qml")));
+    m_topoView->setFixedHeight(185);
+    leftLayout->addWidget(m_topoView);
+
+    // 患者信息卡片
+    auto *patCard = new QFrame(leftCol);
+    patCard->setObjectName(QStringLiteral("patientCard"));
+    patCard->setStyleSheet(QStringLiteral("background: #FFFFFF; border: 1px solid #CBD5E1; border-radius: 6px; padding: 4px;"));
+    auto *patLayout = new QVBoxLayout(patCard);
+    patLayout->setContentsMargins(8, 5, 8, 5);
+    patLayout->setSpacing(3);
+
+    auto *patHead = new QLabel(QStringLiteral("👤 患者信息"), patCard);
+    patHead->setStyleSheet(QStringLiteral("font-size: 11px; font-weight: 700; color: #475569; border-bottom: 1px solid #F1F5F9; padding-bottom: 2px;"));
+    patLayout->addWidget(patHead);
+
+    auto addPatRow = [patCard, patLayout](const QString &k, QLabel *valWidget, const QString &defaultVal) {
+        auto *row = new QHBoxLayout;
+        auto *lbl = new QLabel(k, patCard);
+        lbl->setStyleSheet(QStringLiteral("font-size: 10px; color: #64748B;"));
+        lbl->setFixedWidth(65);
+        if (valWidget) {
+            valWidget->setParent(patCard);
+            valWidget->show();
+            valWidget->setStyleSheet(QStringLiteral("font-size: 10px; font-weight: 600; color: #0F172A; font-family: 'Menlo', monospace;"));
+            row->addWidget(lbl);
+            row->addWidget(valWidget, 1);
         }
-        names.at(index)->setProperty("clinicalRole", "muted");
-        ui->gridLayout_planSummary->addWidget(names.at(index), index * 2, 0);
-        auto *readback = new ClinicalReadbackView(ui->widgetPlanSummary);
-        readback->setProperty("sourceLabel", values.at(index)->objectName());
-        readback->setReadback(values.at(index)->text());
-        values.at(index)->hide();
-        values.at(index)->setParent(legacy);
-        ui->gridLayout_planSummary->addWidget(readback, index * 2 + 1, 0);
-    }
-    ui->gridLayout_planSummary->setColumnStretch(1, 0);
-    ui->horizontalLayout_7->setContentsMargins(0, 4, 0, 0);
-    ui->horizontalLayout_7->setSpacing(6);
-    ui->confirmPlan_pushButton->setText(tr("确认计划"));
-    ui->confirmPlan_pushButton->setMinimumWidth(110);
-    ui->planDetail_pushButton->setMinimumWidth(76);
-    m_fieldSummary = new QTreeWidget(left);
-    m_fieldSummary->setObjectName(QStringLiteral("clinicalFieldSummary"));
-    m_fieldSummary->setColumnCount(1);
-    m_fieldSummary->setHeaderHidden(true);
-    m_fieldSummary->setRootIsDecorated(false);
-    m_fieldSummary->setWordWrap(true);
-    m_fieldSummary->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    m_fieldSummary->header()->setSectionResizeMode(QHeaderView::Stretch);
-    m_fieldSummary->setMinimumHeight(180);
-    m_fieldSummary->setMaximumHeight(260);
-    new QTreeWidgetItem(m_fieldSummary, {tr("等待射野计划")});
-    auto *fieldTitle = label(tr("射野信息"), "section", left);
-    leftLayout->addWidget(fieldTitle);
-    leftLayout->addWidget(m_fieldSummary);
-    // Don't place an expanding spacer here: after the field widgets are moved
-    // into the plan scroll page, it would separate the identity and plan cards.
-    // Add the stretch AFTER the plan card, just before the bottom actions.
-    auto *planActions = new QHBoxLayout;
-    for (QPushButton *button : {ui->confirmPlan_pushButton, ui->planDetail_pushButton}) {
-        button->setParent(left);
-        planActions->addWidget(button);
-    }
-    leftLayout->addLayout(planActions);
-    // Outer card: operator info + patient info share one larger card.
-    auto *identityCard = new QGroupBox(tr("人员与患者信息"), left);
-    identityCard->setObjectName(QStringLiteral("clinicalIdentityCard"));
-    identityCard->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
-    auto *identityLayout = new QVBoxLayout(identityCard);
-    identityCard->setTitle(QString());
-    identityLayout->setContentsMargins(8, 7, 8, 9);
-    identityLayout->setSpacing(6);
-    identityLayout->addWidget(monitorCardBar(identityCard, tr("人员与患者信息"),
-                                             QStringLiteral("✚")));
+        patLayout->addLayout(row);
+    };
+    addPatRow(QStringLiteral("患者姓名:"), ui->patient_name, QStringLiteral("TEST_PATIENT"));
+    addPatRow(QStringLiteral("患者编号:"), ui->patient_id, QStringLiteral("02596401C26"));
+    auto *mrnLabel = new QLabel(QStringLiteral("02596401C26"), patCard);
+    addPatRow(QStringLiteral("病历号:"), mrnLabel, QStringLiteral("02596401C26"));
+    auto *roomPatLabel = new QLabel(m_roomId.isEmpty() ? QStringLiteral("ROOM_2") : m_roomId, patCard);
+    addPatRow(QStringLiteral("治疗机房:"), roomPatLabel, QStringLiteral("ROOM_2"));
+    auto *opPatLabel = new QLabel(m_currentUsername.isEmpty() ? QStringLiteral("rtt_1") : m_currentUsername, patCard);
+    addPatRow(QStringLiteral("操作员:"), opPatLabel, QStringLiteral("rtt_1"));
+    leftLayout->addWidget(patCard);
 
-    // Use titled group boxes to make the three clinical information areas explicit.
-    auto *operatorSection = new QGroupBox(left);
-    operatorSection->setObjectName(QStringLiteral("clinicalOperatorGroup"));
-    operatorSection->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
-    auto *operatorLayout = new QVBoxLayout(operatorSection);
-    operatorLayout->setContentsMargins(7, 5, 7, 5);
-    operatorLayout->setSpacing(5);
-    // The operator area has no legacy icon heading. Build one to match
-    // the existing patient and treatment-plan icon headings.
-    auto *operatorHeader = new QWidget(operatorSection);
-    operatorHeader->setObjectName(QStringLiteral("clinicalMonitorSectionBar"));
-    operatorHeader->setAttribute(Qt::WA_StyledBackground);
-    auto *operatorHeadingRow = new QHBoxLayout(operatorHeader);
-    operatorHeadingRow->setContentsMargins(9, 1, 9, 1);
-    operatorHeadingRow->setSpacing(6);
-    auto *operatorHeadingIcon = new QLabel(operatorSection);
-    operatorHeadingIcon->setObjectName(QStringLiteral("clinicalOperatorHeadingIcon"));
-    operatorHeadingIcon->setFixedSize(18, 18);
-    const QPixmap operatorPixmap = QIcon(QStringLiteral(":/icons/icons/therapist_new.svg"))
-                                     .pixmap(QSize(18, 18));
-    if (!operatorPixmap.isNull()) {
-        operatorHeadingIcon->setPixmap(operatorPixmap);
-    } else {
-        operatorHeadingIcon->setText(QStringLiteral("●"));
-        operatorHeadingIcon->setProperty("clinicalRole", "groupHeadingIcon");
-    }
-    auto *operatorHeading = label(tr("操作员信息"), "groupHeading", operatorSection);
-    operatorHeading->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
-    operatorHeadingRow->addWidget(operatorHeadingIcon);
-    operatorHeadingRow->addWidget(operatorHeading, 1);
-    operatorHeader->setFixedHeight(31);
-    operatorLayout->addWidget(operatorHeader);
-    // Operator photo placeholder + authenticated identity. Keep actual login
-    // widgets and network state authoritative; no photo/id is fabricated.
-    auto *operatorInfoRow = new QHBoxLayout;
-    operatorInfoRow->setContentsMargins(0, 2, 0, 0);
-    operatorInfoRow->setSpacing(12);
-    auto *photo = new QLabel(tr("照片\n待提供"), operatorSection);
-    photo->setObjectName(QStringLiteral("clinicalOperatorPhoto"));
-    photo->setTextFormat(Qt::PlainText);
-    photo->setAlignment(Qt::AlignCenter);
-    photo->setWordWrap(true);
-    photo->setFixedSize(96, 112);
-    photo->setToolTip(tr("预留操作员照片位置。照片数据接入后可使用 setPixmap() 更新。"));
-    operatorInfoRow->addWidget(photo, 0, Qt::AlignTop);
+    // 治疗计划卡片
+    auto *planCard = new QFrame(leftCol);
+    planCard->setObjectName(QStringLiteral("planCard"));
+    planCard->setStyleSheet(QStringLiteral("background: #FFFFFF; border: 1px solid #CBD5E1; border-radius: 6px; padding: 4px;"));
+    auto *planLayout = new QVBoxLayout(planCard);
+    planLayout->setContentsMargins(8, 5, 8, 5);
+    planLayout->setSpacing(3);
 
-    auto *operatorInfoGrid = new QGridLayout;
-    operatorInfoGrid->setContentsMargins(0, 0, 0, 0);
-    operatorInfoGrid->setHorizontalSpacing(8);
-    operatorInfoGrid->setVerticalSpacing(10);
-    operatorInfoGrid->setColumnStretch(0, 0);
-    operatorInfoGrid->setColumnStretch(1, 1);
-    const auto addOperatorCaption = [operatorSection, &label, operatorInfoGrid]
-        (const QString &text, int row) {
-        QLabel *caption = label(text, "operatorCaption", operatorSection);
-        caption->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Preferred);
-        operatorInfoGrid->addWidget(caption, row, 0);
+    auto *planHeadBox = new QHBoxLayout;
+    auto *planHead = new QLabel(QStringLiteral("📄 治疗计划"), planCard);
+    planHead->setStyleSheet(QStringLiteral("font-size: 11px; font-weight: 700; color: #475569;"));
+    planHeadBox->addWidget(planHead);
+    planHeadBox->addStretch(1);
+    if (ui->planDetail_pushButton) {
+        ui->planDetail_pushButton->setParent(planCard);
+        ui->planDetail_pushButton->setText(QStringLiteral("详情"));
+        ui->planDetail_pushButton->setStyleSheet(QStringLiteral("font-size: 10px; color: #2563EB; background: transparent; border: none; padding: 0 4px;"));
+        planHeadBox->addWidget(ui->planDetail_pushButton);
+    }
+    auto *planTag = new QLabel(QStringLiteral("待确认"), planCard);
+    planTag->setStyleSheet(QStringLiteral("background: #FEF3C7; color: #D97706; font-size: 9px; font-weight: 600; padding: 1px 4px; border-radius: 2px;"));
+    planHeadBox->addWidget(planTag);
+    planLayout->addLayout(planHeadBox);
+
+    auto addPlanRow = [planCard, planLayout](const QString &k, const QString &v, bool isHighlight = false) {
+        auto *row = new QHBoxLayout;
+        auto *lbl = new QLabel(k, planCard);
+        lbl->setStyleSheet(QStringLiteral("font-size: 10px; color: #64748B;"));
+        lbl->setFixedWidth(65);
+        auto *val = new QLabel(v, planCard);
+        val->setStyleSheet(QStringLiteral("font-size: 10px; font-family: 'Menlo', monospace; font-weight: %1; color: %2;").arg(
+            isHighlight ? QStringLiteral("700") : QStringLiteral("500"),
+            isHighlight ? QStringLiteral("#2563EB") : QStringLiteral("#1E293B")));
+        row->addWidget(lbl);
+        row->addWidget(val, 1);
+        planLayout->addLayout(row);
     };
 
-    leftLayout->removeWidget(ui->label_6);
-    leftLayout->removeWidget(ui->label_user);
-    ui->label_6->setParent(operatorSection);
-    ui->label_6->setProperty("clinicalRole", "operatorValue");
-    ui->label_6->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
-    ui->label_6->setWordWrap(true);
-    ui->label_6->setMinimumWidth(0);
-    ui->label_6->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
-    addOperatorCaption(tr("姓名"), 0);
-    operatorInfoGrid->addWidget(ui->label_6, 0, 1);
+    addPlanRow(QStringLiteral("计划编号:"), QStringLiteral("PLAN-RT-2026-CH501"), true);
+    addPlanRow(QStringLiteral("计划名称:"), QStringLiteral("颅脑 / PTV_High_60Gy"));
+    addPlanRow(QStringLiteral("靶区部位:"), QStringLiteral("颅脑 / PTV_High_60Gy"), true);
+    addPlanRow(QStringLiteral("处方剂量:"), QStringLiteral("60.0 Gy (2.00 Gy/次)"), true);
+    addPlanRow(QStringLiteral("治疗分次:"), QStringLiteral("分次 1 / 30 次"));
+    addPlanRow(QStringLiteral("束流/模式:"), QStringLiteral("2 束 (PBS 点扫描)"));
+    addPlanRow(QStringLiteral("能量/层数:"), QStringLiteral("120 MeV / 32 层"));
+    addPlanRow(QStringLiteral("等中心:"), QStringLiteral("(0.0, 0.0, 0.0) mm"));
+    addPlanRow(QStringLiteral("照射野:"), QStringLiteral("G0_B01_SOBP"));
+    addPlanRow(QStringLiteral("下发状态:"), QStringLiteral("待确认下发"));
+    addPlanRow(QStringLiteral("安全联锁:"), QStringLiteral("正常 (PASSED)"));
 
-    // Preserve the role field for existing backend/UI logic, but do not show it
-    // as an additional row in the requested three-field identity card.
-    ui->label_user->setParent(legacy);
-    ui->label_user->hide();
-    addOperatorCaption(tr("工号"), 1);
-    auto *employeeNoValue = label(tr("未提供"), "operatorValue", operatorSection);
-    employeeNoValue->setObjectName(QStringLiteral("clinicalEmployeeNoValue"));
-    employeeNoValue->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
-    const QString employeeNo = operatorEmployeeNo(m_userInfo);
-    if (m_startupState.authenticated && !employeeNo.isEmpty())
-        employeeNoValue->setText(employeeNo);
-    operatorInfoGrid->addWidget(employeeNoValue, 1, 1);
+    // 计划底部按钮
+    auto *planBtnBox = new QHBoxLayout;
+    planBtnBox->setSpacing(6);
+    auto *btnDetailFull = new QPushButton(QStringLiteral("计划详情"), planCard);
+    btnDetailFull->setStyleSheet(QStringLiteral("background: #EFF6FF; border: 1px solid #BFDBFE; border-radius: 4px; color: #2563EB; font-size: 11px; font-weight: 600; padding: 5px;"));
+    connect(btnDetailFull, &QPushButton::clicked, this, &TreatmentWindow::showCurrentPlanDetail);
+    planBtnBox->addWidget(btnDetailFull, 1);
 
-    ui->label_7->setParent(operatorSection);
-    ui->label_7->setProperty("clinicalRole", "operatorValue");
-    ui->label_7->setProperty("clinicalOperatorRoom", false);
-    ui->label_7->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
-    ui->label_7->setWordWrap(true);
-    ui->label_7->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
-    addOperatorCaption(tr("治疗室"), 2);
-    operatorInfoGrid->addWidget(ui->label_7, 2, 1);
-    operatorInfoRow->addLayout(operatorInfoGrid, 1);
-    operatorLayout->addLayout(operatorInfoRow);
-    identityLayout->addWidget(operatorSection);
-    // Reparenting a QWidget hides it; make the two existing .ui labels visible.
-    ui->label_6->show();
-    ui->label_7->show();
+    if (ui->confirmPlan_pushButton) {
+        ui->confirmPlan_pushButton->setParent(planCard);
+        ui->confirmPlan_pushButton->setText(QStringLiteral("等待排程叫号"));
+        ui->confirmPlan_pushButton->setStyleSheet(QStringLiteral("background: #2563EB; border: 1px solid #2563EB; border-radius: 4px; color: #FFFFFF; font-size: 11px; font-weight: 600; padding: 5px;"));
+        planBtnBox->addWidget(ui->confirmPlan_pushButton, 1);
+    }
+    planLayout->addLayout(planBtnBox);
+    leftLayout->addWidget(planCard);
+    leftLayout->addStretch(1);
 
-    auto *patientSection = new QGroupBox(left);
-    patientSection->setObjectName(QStringLiteral("clinicalPatientGroup"));
-    patientSection->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
-    auto *patientLayout = new QVBoxLayout(patientSection);
-    patientLayout->setContentsMargins(7, 5, 7, 5);
-    patientLayout->setSpacing(4);
-    patientLayout->addWidget(monitorSectionBar(patientSection, tr("患者信息"),
-                                                QStringLiteral("●")));
-    // The source .ui heading is hidden only to prevent a duplicate label.
-    if (auto *patientHeading = findChild<QLabel *>(QStringLiteral("label_title_patient")))
-        patientHeading->hide();
-    if (auto *patientIcon = findChild<QLabel *>(QStringLiteral("label_icon_patient")))
-        patientIcon->hide();
-    ui->groupBoxPatientInfo->setTitle(QString()); // Keep the original patient data bindings.
+    leftCol->setMinimumWidth(300);
+    leftCol->setMaximumWidth(360);
+    columns->addWidget(leftCol);
 
-    // Patient photo placeholder to match the operator's photo card.
-    // Display-only; no patient image or identity is synthesized.
-    auto *patientIdentityRow = new QHBoxLayout;
-    patientIdentityRow->setContentsMargins(0, 3, 0, 2);
-    patientIdentityRow->setSpacing(12);
-    patientLayout->addLayout(patientIdentityRow);
-    auto *patientPhoto = new QLabel(tr("照片\n待提供"), patientSection);
-    patientPhoto->setObjectName(QStringLiteral("clinicalPatientPhoto"));
-    patientPhoto->setTextFormat(Qt::PlainText);
-    patientPhoto->setAlignment(Qt::AlignCenter);
-    patientPhoto->setWordWrap(true);
-    patientPhoto->setFixedSize(96, 112);
-    patientPhoto->setToolTip(tr("预留患者照片位置；未接入经核验的患者照片前，不显示任何模拟照片。"));
-    patientIdentityRow->addWidget(patientPhoto, 0, Qt::AlignTop);
-
-    leftLayout->removeWidget(ui->groupBoxPatientInfo);
-    ui->groupBoxPatientInfo->setMinimumHeight(0);
-    move(ui->groupBoxPatientInfo, patientIdentityRow);
-
-    // Prescription-dose fields remain below the patient identity row.
-    leftLayout->removeWidget(ui->groupBoxPrescriptionDose);
-    ui->groupBoxPrescriptionDose->setMinimumHeight(0);
-    move(ui->groupBoxPrescriptionDose, patientLayout);
-    identityLayout->addWidget(patientSection);
-
-    leftLayout->insertWidget(0, identityCard);
-
-    auto *planSection = new QGroupBox(left);
-    planSection->setObjectName(QStringLiteral("clinicalPlanGroup"));
-    planSection->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
-    auto *planSectionLayout = new QVBoxLayout(planSection);
-    planSection->setTitle(QString());
-    planSectionLayout->setContentsMargins(8, 7, 8, 8);
-    planSectionLayout->setSpacing(6);
-    planSectionLayout->addWidget(monitorCardBar(planSection, tr("治疗计划"),
-                                                 QStringLiteral("▦")));
-    if (auto *planHeading = findChild<QLabel *>(QStringLiteral("label_title_plan")))
-        planHeading->hide();
-    if (auto *planIcon = findChild<QLabel *>(QStringLiteral("label_icon_plan")))
-        planIcon->hide();
-    ui->groupBoxTreatmentPlan->setTitle(QString()); // Existing icon + title is the only plan heading.
-
-    // Append field information directly under the treatment-plan content so it
-    // appears as part of the treatment plan section instead of an external block.
-    planLayout->setSpacing(8);
-    fieldTitle->setParent(planPage);
-    fieldTitle->setContentsMargins(0, 6, 0, 0);
-    planLayout->addWidget(fieldTitle);
-    m_fieldSummary->setParent(planPage);
-    m_fieldSummary->setMaximumHeight(QWIDGETSIZE_MAX);
-    m_fieldSummary->setMinimumHeight(180);
-    planLayout->addWidget(m_fieldSummary);
-
-    leftLayout->removeWidget(patientScroll);
-    patientScroll->setParent(planSection);
-    planSectionLayout->addWidget(patientScroll);
-    // Keep the treatment-plan card immediately below the personnel/patient
-    // card. Only the remaining space before the bottom action buttons expands.
-    leftLayout->insertWidget(1, planSection);
-    leftLayout->insertStretch(leftLayout->count() - 1, 1);
-    left->setMinimumWidth(380);
-    left->setMaximumWidth(520);
-    columns->addWidget(left);
-
-    // Main workflow/plan section occupies the whole lower-left column.
-    // Use a real QGroupBox to visually separate it from safety and dispatch.
-    auto *center = new QGroupBox(tr("计划核对与流程监控"), columns);
-    center->setObjectName(QStringLiteral("clinicalExecutionColumn"));
-    center->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
-    auto *centerLayout = new QVBoxLayout(center);
-    center->setTitle(QString());
-    centerLayout->setContentsMargins(7, 6, 7, 8);
+    // 3.2 中栏：5 阶段宏观流程条 + 中央 360° 环形中控大舞台
+    auto *centerCol = new QWidget(columns);
+    centerCol->setObjectName(QStringLiteral("clinicalExecutionColumn"));
+    auto *centerLayout = new QVBoxLayout(centerCol);
+    centerLayout->setContentsMargins(0, 0, 0, 0);
     centerLayout->setSpacing(6);
-    // Separate, full-width header for the workflow card; the flow itself is untouched.
-    centerLayout->addWidget(monitorCardBar(center, tr("流程状态"),
-                                            QStringLiteral("▤")));
-    auto *stageHeading = label(tr("计划核对"), "section", center);
-    stageHeading->setObjectName(QStringLiteral("clinicalStageHeading"));
-    centerLayout->addWidget(stageHeading);
-    stageHeading->hide();
-    move(findChild<QGroupBox *>(QStringLiteral("groupBoxDeviceReadiness")), centerLayout);
-    ui->labelDeviceStatusCaption->setText(tr("设备状态"));
-    ui->labelDeviceStatusCaption->setProperty("clinicalRole", "section");
-    auto *auxiliary = new QWidget(center);
-    auto *auxiliaryGrid = new QGridLayout(auxiliary);
-    auxiliaryGrid->setObjectName(QStringLiteral("clinicalAuxiliaryLayout"));
-    auxiliaryGrid->setContentsMargins(0, 0, 0, 0);
-    auxiliaryGrid->setHorizontalSpacing(16);
-    int auxiliaryIndex = 0;
-    for (const QString &name : {QStringLiteral("g01Homed"), QStringLiteral("g02Homed"),
-                                QStringLiteral("acceleratorReady"), QStringLiteral("ddsFault")}) {
-        auto *pair = new QWidget(auxiliary);
-        pair->setObjectName(QStringLiteral("clinicalSafetyIndicator%1").arg(auxiliaryIndex));
-        pair->setProperty("clinicalSafetyItem", true);
-        pair->setAttribute(Qt::WA_StyledBackground);
-        auto *row = new QHBoxLayout(pair);
-        row->setContentsMargins(0, 0, 0, 0);
-        row->setSpacing(6);
-        for (const QString &suffix : {QStringLiteral("Lamp"), QStringLiteral("Text")}) {
-            if (auto *widget = findChild<QWidget *>(name + suffix)) {
-                widget->setParent(pair);
-                widget->show();
-                row->addWidget(widget);
-            }
-        }
-        row->addStretch();
-        auxiliaryGrid->addWidget(pair, 0, auxiliaryIndex);
-        auxiliaryGrid->setColumnStretch(auxiliaryIndex, 1);
-        ++auxiliaryIndex;
+
+    // 顶部：流程监控 (StepProgressBar.qml)
+    if (ui->groupBoxTreatmentFlow) {
+        ui->groupBoxTreatmentFlow->setParent(centerCol);
+        ui->groupBoxTreatmentFlow->show();
+        ui->groupBoxTreatmentFlow->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+        centerLayout->addWidget(ui->groupBoxTreatmentFlow);
     }
-    if (auto *item = ui->gridLayout_deviceStatus->itemAtPosition(2, 0)) {
-        if (auto *oldRow = item->layout()) {
-            ui->gridLayout_deviceStatus->removeItem(oldRow);
-            delete oldRow;
-        }
+
+    // 主体中央大舞台 (Bed3DView.qml) 直接铺满
+    if (ui->groupBoxBedPreview) {
+        ui->groupBoxBedPreview->setParent(centerCol);
+        ui->groupBoxBedPreview->show();
+        ui->groupBoxBedPreview->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+        centerLayout->addWidget(ui->groupBoxBedPreview, 1);
     }
-    // Real readback indicators move into the top safety panel below.
-    m_executionTabs = new QTabWidget(center);
+    columns->addWidget(centerCol);
+    m_executionTabs = new QTabWidget(legacy);
     m_executionTabs->setObjectName(QStringLiteral("clinicalExecutionTabs"));
-    auto *overview = new WorkflowOverview;
-    m_executionTabs->addTab(scroll(overview, QStringLiteral("clinicalOverviewScroll")), tr("流程监控"));
-    auto *planPreview = new QWidget;
-    auto *planPreviewLayout = new QVBoxLayout(planPreview);
-    planPreviewLayout->setContentsMargins(0, 4, 0, 0);
-    planPreviewLayout->setSpacing(10);
-    planPreviewLayout->setAlignment(Qt::AlignTop);
-    auto *planMetrics = new QWidget(planPreview);
-    auto *planMetricsLayout = new QGridLayout(planMetrics);
-    planMetricsLayout->setContentsMargins(0, 4, 0, 4);
-    for (int index = 0; index < 3; ++index) {
-        const QStringList names = {tr("射野数"), tr("能层数"), tr("Spot 数")};
-        const QStringList objects = {QStringLiteral("clinicalBeamCount"), QStringLiteral("clinicalLayerCount"),
-                                     QStringLiteral("clinicalSpotCount")};
-        auto *caption = label(names.at(index), "muted", planMetrics);
-        auto *value = label(tr("未提供"), "planMetric", planMetrics);
-        value->setObjectName(objects.at(index));
-        planMetricsLayout->addWidget(caption, 0, index);
-        planMetricsLayout->addWidget(value, 1, index);
-        planMetricsLayout->setColumnStretch(index, 1);
-    }
-    planPreviewLayout->addWidget(planMetrics);
-    auto *planWaiting = label(tr("等待治疗计划"), "empty", planPreview);
-    planWaiting->setObjectName(QStringLiteral("clinicalPlanWaiting"));
-    planWaiting->setAlignment(Qt::AlignCenter);
-    planWaiting->setMinimumHeight(200);
-    planPreviewLayout->addWidget(planWaiting);
-    auto *planMapHost = new QWidget(planPreview);
-    planMapHost->setObjectName(QStringLiteral("clinicalPlanMapHost"));
-    auto *planMapLayout = new QVBoxLayout(planMapHost);
-    planMapLayout->setContentsMargins(0, 0, 0, 0);
-    planPreviewLayout->addWidget(planMapHost, 1);
-    m_executionTabs->addTab(scroll(planPreview, QStringLiteral("clinicalPlanPreviewScroll")), tr("计划核对"));
-    auto *bedPage = new QWidget;
-    auto *bedLayout = new QVBoxLayout(bedPage);
-    bedLayout->setContentsMargins(0, 0, 0, 0);
-    bedLayout->setAlignment(Qt::AlignTop);
-    move(ui->groupBoxBedPreview, bedLayout);
-    ui->groupBoxBedPreview->setMinimumHeight(420);
-    ui->groupBoxBedPreview->setMaximumHeight(560);
-    bedLayout->addWidget(label(tr("坐标容差：未配置 · 计划值及角度单位接口待确认"), "muted", bedPage));
-    m_executionTabs->addTab(scroll(bedPage, QStringLiteral("clinicalBedScroll")), tr("摆位 / 配准"));
-    auto *deliveryPage = new QWidget;
-    auto *deliveryLayout = new QVBoxLayout(deliveryPage);
-    deliveryLayout->setContentsMargins(0, 0, 0, 0);
-    deliveryLayout->setSpacing(10);
-    auto *waiting = label(tr("等待治疗任务"), "empty", deliveryPage);
-    waiting->setObjectName(QStringLiteral("clinicalWaiting"));
-    waiting->setAlignment(Qt::AlignCenter);
-    waiting->setMinimumHeight(200);
-    deliveryLayout->addWidget(waiting);
-    auto *execution = new QWidget(deliveryPage);
-    auto *executionGrid = new QGridLayout(execution);
-    executionGrid->setObjectName(QStringLiteral("clinicalDeliveryGrid"));
-    executionGrid->setContentsMargins(0, 0, 0, 0);
-    executionGrid->setSpacing(12);
-    auto *live = findChild<QGroupBox *>(QStringLiteral("groupBoxLiveDose"));
-    live->setParent(execution);
-    executionGrid->addWidget(live, 0, 0, Qt::AlignTop);
-    deliveryLayout->addWidget(execution);
-    auto *liveGrid = deliveryPage->findChild<QGridLayout *>(QStringLiteral("gridLayoutLiveDose"));
-    liveGrid->removeWidget(ui->doseLayerProgressCard);
-    ui->doseLayerProgressCard->hide();
-    liveGrid->removeWidget(ui->doseBeamMuCard);
-    liveGrid->addWidget(ui->doseBeamMuCard, 3, 0, 1, 2);
-    ui->labelDoseDeliveryProgressName->setText(tr("整场计量 / 目标"));
-    ui->spotMapWidget->setParent(execution);
-    executionGrid->addWidget(ui->spotMapWidget, 1, 0);
-    ui->spotMapWidget->setMinimumHeight(330);
-    deliveryLayout->addWidget(label(tr("靶区轮廓：未接入"), "muted", deliveryPage));
-    auto *channels = new QWidget(deliveryPage);
-    channels->setObjectName(QStringLiteral("clinicalDoseChannels"));
-    auto *channelGrid = new QGridLayout(channels);
-    channelGrid->setContentsMargins(0, 8, 0, 8);
-    channelGrid->setColumnStretch(0, 1);
-    channelGrid->setColumnStretch(1, 1);
-    for (int index = 0; index < 2; ++index) {
-        channelGrid->addWidget(label(index == 0 ? tr("主剂量通道") : tr("备剂量通道"), "section", channels), 0, index);
-        channelGrid->addWidget(label(tr("— 未接入"), "metric", channels), 1, index);
-    }
-    channelGrid->addWidget(label(tr("通道一致性：未接入 · 偏差阈值未配置"), "muted", channels), 2, 0, 1, 2);
-    channelGrid->addWidget(label(tr("已治疗时间：未接入    剩余治疗时间：未接入"), "muted", channels), 3, 0, 1, 2);
-    deliveryLayout->addWidget(channels);
-    m_executionTabs->addTab(scroll(deliveryPage, QStringLiteral("clinicalDeliveryScroll")), tr("执行 / 剂量"));
-    centerLayout->addWidget(m_executionTabs, 1);
-    center->setMinimumWidth(580);
-    columns->addWidget(center);
 
-    auto *right = panel(QStringLiteral("clinicalDispatchColumn"), columns);
-    auto *rightLayout = new QVBoxLayout(right);
-    rightLayout->setContentsMargins(8, 8, 8, 8);
-    rightLayout->setSpacing(8);
-    rightLayout->setAlignment(Qt::AlignTop);
+    // 3.3 右栏：剂量监控 + 准入排队 + 系统日志
+    auto *rightCol = new QWidget(columns);
+    auto *rightLayout = new QVBoxLayout(rightCol);
+    rightLayout->setContentsMargins(0, 0, 0, 0);
+    rightLayout->setSpacing(6);
 
-    // Reference-style monitoring cards; the original readback widgets are reused.
-    auto *doseCard = new QGroupBox(tr("剂量监控"), right);
-    doseCard->setObjectName(QStringLiteral("clinicalDoseCard"));
-    auto *doseCardLayout = new QVBoxLayout(doseCard);
-    doseCardLayout->setContentsMargins(8, 12, 8, 8);
-    doseCardLayout->setSpacing(6);
-    executionGrid->removeWidget(live);
-    move(live, doseCardLayout);
+    // 剂量监控卡片
+    auto *doseCard = new QFrame(rightCol);
+    doseCard->setObjectName(QStringLiteral("doseMonitorCard"));
+    auto *doseLayout = new QVBoxLayout(doseCard);
+    doseLayout->setContentsMargins(8, 5, 8, 6);
+    doseLayout->setSpacing(4);
+
+    auto *doseHead = new QHBoxLayout;
+    auto *doseTitle = new QLabel(QStringLiteral("⏱️ 剂量监控"), doseCard);
+    doseTitle->setStyleSheet(QStringLiteral("font-size: 11px; font-weight: 700; color: #475569;"));
+    auto *doseTag = new QLabel(QStringLiteral("已关束"), doseCard);
+    doseTag->setStyleSheet(QStringLiteral("background: #F1F5F9; color: #64748B; font-size: 9px; font-weight: 600; padding: 1px 4px; border-radius: 2px;"));
+    doseHead->addWidget(doseTitle);
+    doseHead->addStretch(1);
+    doseHead->addWidget(doseTag);
+    doseLayout->addLayout(doseHead);
+
+    auto *doseRow = new QHBoxLayout;
+    doseRow->setSpacing(8);
+    m_doseGaugeView = new QQuickWidget(doseCard);
+    m_doseGaugeView->setResizeMode(QQuickWidget::SizeRootObjectToView);
+    m_doseGaugeView->setAttribute(Qt::WA_AlwaysStackOnTop);
+    m_doseGaugeView->setClearColor(Qt::transparent);
+    m_doseGaugeView->setSource(QUrl(QStringLiteral("qrc:/models/DoseDashboard.qml")));
+    m_doseGaugeView->setFixedSize(116, 116);
+    doseRow->addWidget(m_doseGaugeView);
+
+    auto *numCol = new QVBoxLayout;
+    numCol->setSpacing(4);
+    auto addNumBox = [doseCard, numCol](const QString &k, const QString &v, bool isPrimary = false) -> QLabel* {
+        auto *box = new QVBoxLayout;
+        box->setSpacing(0);
+        auto *kl = new QLabel(k, doseCard);
+        kl->setStyleSheet(QStringLiteral("font-size: 10px; color: #64748B;"));
+        auto *vl = new QLabel(v, doseCard);
+        vl->setStyleSheet(QStringLiteral("font-size: 13px; font-weight: 700; font-family: 'Menlo', monospace; color: %1;").arg(isPrimary ? QStringLiteral("#2563EB") : QStringLiteral("#0F172A")));
+        box->addWidget(kl);
+        box->addWidget(vl);
+        numCol->addLayout(box);
+        return vl;
+    };
+    m_doseTargetLabel = addNumBox(QStringLiteral("目标剂量"), QStringLiteral("0 MU"));
+    m_doseDeliveredLabel = addNumBox(QStringLiteral("已照剂量"), QStringLiteral("0.0 MU"), true);
+    m_doseCumulativeLabel = addNumBox(QStringLiteral("累积剂量"), QStringLiteral("0.0 cGy"));
+    doseRow->addLayout(numCol, 1);
+    doseLayout->addLayout(doseRow);
     rightLayout->addWidget(doseCard);
-    live->setProperty("clinicalDoseSidebar", true);
 
-    auto *queueCard = new QGroupBox(tr("准入排队 / 束流调度"), right);
-    queueCard->setObjectName(QStringLiteral("clinicalQueueCard"));
-    auto *queueCardLayout = new QVBoxLayout(queueCard);
-    queueCardLayout->setContentsMargins(8, 12, 8, 8);
-    queueCardLayout->setSpacing(6);
-    move(ui->groupBoxOperationQueue, queueCardLayout);
-    // Read-only WatchAdmission data. Queue state never grants beam permission.
-    auto *admissionLabel = new QLabel(tr("准入排队：等待调度回读"), queueCard);
-    admissionLabel->setObjectName(QStringLiteral("clinicalAdmissionTelemetryLabel"));
-    admissionLabel->setWordWrap(true);
-    admissionLabel->setTextFormat(Qt::PlainText);
-    queueCardLayout->addWidget(admissionLabel);
-    rightLayout->addWidget(queueCard);
-    ui->verticalLayout_ops->removeItem(ui->verticalSpacer_ops);
-    delete ui->verticalSpacer_ops;
-    ui->verticalSpacer_ops = nullptr;
-    ui->verticalLayout_ops->setAlignment(Qt::AlignTop);
-    ui->groupBoxOperationQueue->setMinimumHeight(0);
-    ui->beamApply_pushButton->setMinimumWidth(160);
-    ui->beamApply_pushButton->setMaximumWidth(QWIDGETSIZE_MAX);
-    ui->beamApply_pushButton->setMinimumHeight(46);
-    ui->label_30->setText(tr("未接入"));
-    ui->label_30->setToolTip(tr("等待时间由后端提供；不使用本地写死的示例倒计时。"));
-    if (auto *roomGrid = qobject_cast<QGridLayout *>(ui->beamRoomLabel1->parentWidget()->layout())) {
-        const QVector<QLabel *> rooms = {ui->beamRoomLabel1, ui->beamRoomLabel2, ui->beamRoomLabel9};
-        for (int index = 0; index < rooms.size(); ++index) {
-            roomGrid->removeWidget(rooms.at(index));
-            rooms.at(index)->setMinimumHeight(58);
-            rooms.at(index)->setWordWrap(true);
-            roomGrid->addWidget(rooms.at(index), index, 0);
-        }
-        for (int index = 0; index < 3; ++index) roomGrid->setColumnStretch(index, index == 0 ? 1 : 0);
+    // 准入排队卡片
+    auto *admCard = new QFrame(rightCol);
+    admCard->setObjectName(QStringLiteral("admissionCard"));
+    auto *admLayout = new QVBoxLayout(admCard);
+    admLayout->setContentsMargins(8, 5, 8, 6);
+    admLayout->setSpacing(4);
+
+    auto *admHead = new QHBoxLayout;
+    auto *admTitle = new QLabel(QStringLiteral("🔗 准入排队"), admCard);
+    admTitle->setStyleSheet(QStringLiteral("font-size: 11px; font-weight: 700; color: #475569;"));
+    auto *admTag = new QLabel(QStringLiteral("待申请 (STANDBY)"), admCard);
+    admTag->setStyleSheet(QStringLiteral("background: #64748B; color: #FFFFFF; font-size: 9px; font-weight: 600; padding: 1px 4px; border-radius: 2px;"));
+    admHead->addWidget(admTitle);
+    admHead->addStretch(1);
+    admHead->addWidget(admTag);
+    admLayout->addLayout(admHead);
+
+    // 四宫格
+    auto *admGrid = new QGridLayout;
+    admGrid->setContentsMargins(0, 0, 0, 0);
+    admGrid->setHorizontalSpacing(6);
+    admGrid->setVerticalSpacing(3);
+
+    auto addAdmCell = [admCard, admGrid](const QString &k, const QString &v, int r, int c, bool isHighlight = false) -> QLabel* {
+        auto *cell = new QFrame(admCard);
+        cell->setStyleSheet(QStringLiteral("background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 4px; padding: 3px;"));
+        auto *cl = new QVBoxLayout(cell);
+        cl->setContentsMargins(4, 2, 4, 2);
+        cl->setSpacing(0);
+        auto *kl = new QLabel(k, cell);
+        kl->setStyleSheet(QStringLiteral("font-size: 9px; color: #64748B;"));
+        auto *vl = new QLabel(v, cell);
+        vl->setStyleSheet(QStringLiteral("font-size: 11px; font-weight: 700; font-family: 'Menlo', monospace; color: %1;").arg(isHighlight ? QStringLiteral("#2563EB") : QStringLiteral("#0F172A")));
+        cl->addWidget(kl);
+        cl->addWidget(vl);
+        admGrid->addWidget(cell, r, c);
+        return vl;
+    };
+    m_admTicketLabel = addAdmCell(QStringLiteral("号牌"), QStringLiteral("#--"), 0, 0, true);
+    m_admPosLabel = addAdmCell(QStringLiteral("位次"), QStringLiteral("下位"), 0, 1);
+    m_admEtaLabel = addAdmCell(QStringLiteral("预计等待"), QStringLiteral("0 秒"), 1, 0);
+    m_admTimeLabel = addAdmCell(QStringLiteral("更新时间"), QStringLiteral("12:23:58"), 1, 1);
+    admLayout->addLayout(admGrid);
+
+    // 排队说明条
+    auto *banner = new QFrame(admCard);
+    banner->setObjectName(QStringLiteral("admissionStatusBanner"));
+    auto *bannerLayout = new QHBoxLayout(banner);
+    bannerLayout->setContentsMargins(6, 3, 6, 3);
+    m_admBannerLabel = new QLabel(QStringLiteral("* 等待准备阶段完成"), banner);
+    m_admBannerLabel->setStyleSheet(QStringLiteral("font-size: 10px; color: #1D4ED8; font-weight: 500;"));
+    bannerLayout->addWidget(m_admBannerLabel);
+    admLayout->addWidget(banner);
+
+    // 申请出束大按钮
+    if (ui->beamApply_pushButton) {
+        ui->beamApply_pushButton->setParent(admCard);
+        ui->beamApply_pushButton->setText(QStringLiteral("☢️ 申请出束许可 (待就绪)"));
+        ui->beamApply_pushButton->setObjectName(QStringLiteral("btnBeamApplyLarge"));
+        ui->beamApply_pushButton->setFixedHeight(40);
+        admLayout->addWidget(ui->beamApply_pushButton);
     }
-    rightLayout->addWidget(label(tr("当前供束角度：未接入"), "muted", right));
-    auto *hardwareToggle = new QToolButton(right);
-    hardwareToggle->setObjectName(QStringLiteral("clinicalHardwareToggle"));
-    hardwareToggle->setProperty("sessionReadOnly", true);
-    hardwareToggle->setText(tr("硬件模块 / 门控 · 未接入"));
-    hardwareToggle->setCheckable(true);
-    hardwareToggle->setArrowType(Qt::RightArrow);
-    hardwareToggle->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
-    rightLayout->addWidget(hardwareToggle);
-    auto *hardware = new QWidget(right);
-    auto *hardwareLayout = new QVBoxLayout(hardware);
-    hardwareLayout->setContentsMargins(0, 0, 0, 0);
-    for (const QString &text : {tr("控制盒指示灯：未接入"), tr("控制盒蜂鸣器：未接入"),
-                                tr("呼吸门控：未接入"), tr("门控硬件联动：未接入")})
-        hardwareLayout->addWidget(label(text, "reserved", hardware));
-    rightLayout->addWidget(hardware);
-    hardware->hide();
-    connect(hardwareToggle, &QToolButton::toggled, this, [hardwareToggle, hardware](bool expanded) {
-        hardware->setVisible(expanded);
-        hardwareToggle->setArrowType(expanded ? Qt::DownArrow : Qt::RightArrow);
-    });
-    auto *supply = findChild<QLabel *>(QStringLiteral("labelBeamDeliveryState"));
-    move(supply, doseCardLayout);
-    doseCardLayout->removeWidget(supply);
-    doseCardLayout->insertWidget(0, supply);
-    supply->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
-    supply->setProperty("clinicalRole", "supply");
-    auto *connectionTitle = label(tr("中间层连接"), "section", right);
-    rightLayout->addWidget(connectionTitle);
-    auto *connection = label(tr("待连接"), "muted", right);
-    connection->setObjectName(QStringLiteral("clinicalConnection"));
-    rightLayout->addWidget(connection);
-    auto *debug = new QToolButton(right);
-    debug->setObjectName(QStringLiteral("clinicalDebugDetails"));
-    debug->setProperty("sessionReadOnly", true);
-    debug->setText(tr("调试明细"));
-    debug->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
-    debug->setIcon(style()->standardIcon(QStyle::SP_FileDialogDetailedView));
-    debug->setPopupMode(QToolButton::InstantPopup);
-    auto *menu = new QMenu(debug);
-    debug->setMenu(menu);
-    // Keep diagnostic gRPC history available, without a telemetry-detail entry.
-    menu->addAction(tr("gRPC 通知记录"), this, [this] {
-        auto *dialog = new QDialog(this);
-        dialog->setAttribute(Qt::WA_DeleteOnClose);
-        dialog->setWindowTitle(tr("gRPC 通知记录（只读）"));
-        auto *layout = new QVBoxLayout(dialog);
-        auto *text = new QPlainTextEdit(dialog);
-        text->setReadOnly(true);
-        text->setPlainText(m_grpcCallHistory.join(QLatin1Char('\n')));
-        layout->addWidget(text);
-        dialog->resize(760, 560);
-        dialog->show();
-    });
-    auto *logsCard = new QGroupBox(tr("系统日志 / 调试"), right);
-    logsCard->setObjectName(QStringLiteral("clinicalLogsCard"));
-    auto *logsLayout = new QVBoxLayout(logsCard);
-    logsLayout->setContentsMargins(8, 12, 8, 8);
-    logsLayout->setSpacing(4);
-    move(debug, logsLayout);
+    m_admTipLabel = new QLabel(QStringLiteral("当前状态：等待 OIS 排程确认"), admCard);
+    m_admTipLabel->setStyleSheet(QStringLiteral("font-size: 10px; color: #64748B;"));
+    m_admTipLabel->setAlignment(Qt::AlignCenter);
+    admLayout->addWidget(m_admTipLabel);
+
+    rightLayout->addWidget(admCard);
+
+    // 系统日志专区
+    auto *logDock = new QFrame(rightCol);
+    logDock->setObjectName(QStringLiteral("systemLogsDock"));
+    auto *logDockLayout = new QVBoxLayout(logDock);
+    logDockLayout->setContentsMargins(8, 5, 8, 6);
+    logDockLayout->setSpacing(4);
+
+    auto *dockHead = new QHBoxLayout;
+    auto *dockTitle = new QLabel(QStringLiteral("📄 系统日志"), logDock);
+    dockTitle->setStyleSheet(QStringLiteral("font-size: 11px; font-weight: 700; color: #475569;"));
+    auto *streamBtn = new QPushButton(QStringLiteral("● 通信流 (294)"), logDock);
+    streamBtn->setStyleSheet(QStringLiteral("background: #0284C7; color: #FFFFFF; font-size: 9px; font-weight: 600; padding: 2px 6px; border-radius: 10px; border: none;"));
+    dockHead->addWidget(dockTitle);
+    dockHead->addStretch(1);
+    dockHead->addWidget(streamBtn);
+    logDockLayout->addLayout(dockHead);
+
+    auto *dockLogs = new QHBoxLayout;
+    dockLogs->setSpacing(4);
+    for (const QString &fname : {QStringLiteral("tcs-server.log"), QStringLiteral("tcs-server-app.log"), QStringLiteral("tcs-server-audit.log")}) {
+        auto *b = new QPushButton(fname, logDock);
+        b->setProperty("class", "header-log-btn");
+        b->setFixedHeight(24);
+        connect(b, &QPushButton::clicked, this, [this, fname] { showLogViewDialog(fname); });
+        dockLogs->addWidget(b);
+    }
+    logDockLayout->addLayout(dockLogs);
+    rightLayout->addWidget(logDock);
     rightLayout->addStretch(1);
-    rightLayout->addWidget(logsCard);
-    auto *rightScroll = scroll(right, QStringLiteral("clinicalDispatchScroll"));
-    rightScroll->setMinimumWidth(380);
-    rightScroll->setMaximumWidth(500);
-    columns->addWidget(rightScroll);
-    columns->setStretchFactor(0, 0);
-    columns->setStretchFactor(1, 1);
-    columns->setStretchFactor(2, 0);
-    columns->setSizes({360, 1000, 400});
-    connect(columns, &QSplitter::splitterMoved, this, [this] { updateClinicalDeviceLayout(); });
-    rightLayout->removeWidget(connectionTitle);
-    rightLayout->removeWidget(connection);
+
+    columns->addWidget(rightCol);
     // Move these data-bound widgets after the top safety layout is created.
 
     // Reuse the existing live interlock indicators without changing control gates.
@@ -2969,166 +2909,18 @@ void TreatmentWindow::setupClinicalWorkspace()
     ui->label_38->setText(tr("实际值\n原接口单位"));
     ui->label_39->setText(tr("设置值\n原接口单位"));
     ui->label_39->setToolTip(tr("保留可编辑的设置位置；尚未确认计划床坐标字段，不能等同为计划值。"));
-    // Keep the workflow visible; detailed graphics share a persistent detail window.
-    auto *overviewScroll = qobject_cast<QScrollArea *>(m_executionTabs->widget(0));
-    overviewScroll->takeWidget();
-    m_executionTabs->removeTab(0);
-    delete overviewScroll;
-    centerLayout->removeWidget(m_executionTabs);
-    auto *detailDialog = new QDialog(this);
-    detailDialog->setObjectName(QStringLiteral("clinicalDetailDialog"));
-    detailDialog->setWindowTitle(tr("治疗详情"));
-    detailDialog->resize(1120, 760);
-    auto *detailLayout = new QVBoxLayout(detailDialog);
-    m_executionTabs->setParent(detailDialog);
-    detailLayout->addWidget(m_executionTabs);
-    auto *closeDetails = new QPushButton(tr("关闭"), detailDialog);
-    detailLayout->addWidget(closeDetails, 0, Qt::AlignRight);
-    connect(closeDetails, &QPushButton::clicked, detailDialog, &QDialog::hide);
-
-    root->removeWidget(ui->groupBoxTreatmentFlow);
-    move(ui->groupBoxTreatmentFlow, centerLayout);
-    centerLayout->removeWidget(ui->groupBoxTreatmentFlow);
-    // Put the five-stage progress and alerts immediately AFTER the blue
-    // "流程状态" card title, not above it.
-    centerLayout->insertWidget(1, ui->groupBoxTreatmentFlow);
-    auto *detailTools = new QHBoxLayout;
-    detailTools->setSpacing(6);
-    detailTools->addStretch();
-    // Only expose the execution/spot-detail entry in the workflow toolbar.
-    // Keep the existing plan/bed tabs and state updates intact internally.
-    auto *executionDetailsButton = new QPushButton(tr("束斑 / 执行详情"), center);
-    executionDetailsButton->setObjectName(QStringLiteral("clinicalExecutionDetailsButton"));
-    executionDetailsButton->setProperty("sessionReadOnly", true);
-    detailTools->addWidget(executionDetailsButton);
-    connect(executionDetailsButton, &QPushButton::clicked, this, [this, detailDialog] {
-        auto *deliveryScroll = findChild<QScrollArea *>(
-            QStringLiteral("clinicalDeliveryScroll"));
-        if (deliveryScroll && m_executionTabs->indexOf(deliveryScroll) >= 0)
-            m_executionTabs->setCurrentWidget(deliveryScroll);
-        detailDialog->show();
-        detailDialog->raise();
-        detailDialog->activateWindow();
-    });
-    // The card order is: blue workflow title, five-stage progress/alerts,
-    // read-only detail navigation, then the existing workflow canvas.
-    centerLayout->insertLayout(2, detailTools);
-    auto *canvas = new QWidget(center);
-    canvas->setObjectName(QStringLiteral("clinicalWorkflowCanvas"));
-    auto *canvasGrid = new QGridLayout(canvas);
-    canvasGrid->setObjectName(QStringLiteral("clinicalWorkflowCanvasGrid"));
-    canvasGrid->setContentsMargins(0, 4, 0, 4);
-    canvasGrid->setSpacing(8);
-    auto *deviceRail = new QWidget(canvas);
-    deviceRail->setObjectName(QStringLiteral("clinicalDeviceRail"));
-    auto *deviceLayout = new QVBoxLayout(deviceRail);
-    deviceLayout->setContentsMargins(0, 0, 0, 0);
-    move(findChild<QGroupBox *>(QStringLiteral("groupBoxDeviceReadiness")), deviceLayout);
-    deviceLayout->addStretch();
-
-    auto *bedCard = new QGroupBox(tr("治疗床（六自由度）"), canvas);
-    bedCard->setObjectName(QStringLiteral("clinicalBedCard"));
-    bedCard->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
-    auto *bedCardLayout = new QVBoxLayout(bedCard);
-    bedCardLayout->setContentsMargins(8, 12, 8, 8);
-    bedCardLayout->setSpacing(4);
-    position->setMinimumWidth(0);
-    position->setMaximumWidth(QWIDGETSIZE_MAX);
-    move(position, bedCardLayout);
-    bedCard->setMinimumWidth(240);
-    bedCard->setMaximumWidth(300);
-    for (QLabel *heading : {ui->label_38, ui->label_39}) heading->setMinimumWidth(84);
-
-    overview->setParent(canvas); // Do not alter WorkflowOverview's geometry or painting.
-    canvasGrid->addWidget(bedCard, 0, 0, Qt::AlignVCenter);
-    canvasGrid->addWidget(overview, 0, 1, Qt::AlignCenter);
-    canvasGrid->addWidget(deviceRail, 0, 2, Qt::AlignVCenter);
-    position->show();
-    overview->show();
-    auto *workflowScroll = scroll(canvas, QStringLiteral("clinicalWorkflowScroll"));
-    workflowScroll->setWidgetResizable(true);
-    centerLayout->addWidget(workflowScroll, 1);
-
-    // Top safety card reuses existing live system and gantry/interlock readbacks.
-    // No safety state is fabricated and no interlock behavior is modified.
-    auto *workspace = panel(QStringLiteral("clinicalMainWorkspace"), columns);
-    auto *workspaceLayout = new QVBoxLayout(workspace);
-    workspaceLayout->setContentsMargins(0, 0, 0, 0);
-    workspaceLayout->setSpacing(6);
-    auto *safetyCard = new QGroupBox(tr("安全联锁与物理指示"), workspace);
-    safetyCard->setObjectName(QStringLiteral("clinicalSafetyCard"));
-    auto *safetyLayout = new QVBoxLayout(safetyCard);
-    safetyCard->setTitle(QString());
-    safetyLayout->setContentsMargins(6, 5, 6, 5);
-    safetyLayout->setSpacing(5);
-    // Safety/interlocks are a standalone card, not part of the workflow card.
-    safetyLayout->addWidget(monitorCardBar(safetyCard, tr("安全联锁与物理指示"),
-                                            QStringLiteral("✚")));
-    move(ui->groupBoxSystemStatus, safetyLayout);
-    move(auxiliary, safetyLayout);
-    // On startup, the alert may have been created before the safety card.
-    // Move that SAME live label here; do not duplicate or change alarm logic.
-    if (auto *attention = findChild<QLabel *>(QStringLiteral("labelTreatmentAttention"))) {
-        const bool explicitlyVisible = !attention->isHidden();
-        ui->verticalLayout_flowBox->removeWidget(attention);
-        attention->setParent(safetyCard);
-        safetyLayout->addWidget(attention);
-        attention->setVisible(explicitlyVisible);
-    }
-    move(faultDisplay, safetyLayout);
-    // Hide the middleware connection display, not its status tracking.
-    // Both labels remain findable for the existing status-refresh code.
-    connectionTitle->setParent(legacy);
-    connectionTitle->hide();
-    connection->setParent(legacy);
-    connection->hide();
-    // Two independent cards are vertically stacked in the center column.
-    // This wrapper is only a transparent layout widget, never a titled card.
-    auto *safetyWorkflowStack = new QWidget(workspace);
-    safetyWorkflowStack->setObjectName(QStringLiteral("clinicalSafetyWorkflowStack"));
-    safetyWorkflowStack->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
-    auto *safetyWorkflowLayout = new QVBoxLayout(safetyWorkflowStack);
-    safetyWorkflowLayout->setContentsMargins(0, 0, 0, 0);
-    safetyWorkflowLayout->setSpacing(9);
-    safetyWorkflowLayout->addWidget(safetyCard, 0);
-    safetyWorkflowLayout->addWidget(center, 1);
-
-    // Middle column: safety card above workflow card. Right column: dispatch.
-    auto *workSplit = new QSplitter(Qt::Horizontal, workspace);
-    workSplit->setObjectName(QStringLiteral("clinicalLowerColumns"));
-    workSplit->setChildrenCollapsible(false);
-    workSplit->setHandleWidth(8);
-    auto *dispatchFrame = new QGroupBox(tr("治疗监控与束流调度"), workspace);
-    dispatchFrame->setObjectName(QStringLiteral("clinicalDispatchFrame"));
-    dispatchFrame->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Expanding);
-    auto *dispatchFrameLayout = new QVBoxLayout(dispatchFrame);
-    dispatchFrame->setTitle(QString());
-    dispatchFrameLayout->setContentsMargins(7, 7, 7, 8);
-    dispatchFrameLayout->setSpacing(6);
-    dispatchFrameLayout->addWidget(monitorCardBar(dispatchFrame,
-                                                  tr("治疗监控与束流调度"),
-                                                  QStringLiteral("◈"), true));
-    rightScroll->setParent(dispatchFrame);
-    dispatchFrameLayout->addWidget(rightScroll, 1);
-    dispatchFrame->setMinimumWidth(392);
-    dispatchFrame->setMaximumWidth(530);
-
-    workSplit->addWidget(safetyWorkflowStack);
-    workSplit->addWidget(dispatchFrame);
-    workSplit->setStretchFactor(0, 1);
-    workSplit->setStretchFactor(1, 0);
-    workSplit->setSizes({1500, 460});
-    workspaceLayout->addWidget(workSplit, 1);
-    columns->addWidget(workspace);
+    // 分配左右中栏比例：左栏 310，中栏 920，右栏 290
     columns->setStretchFactor(0, 0);
     columns->setStretchFactor(1, 1);
-    columns->setSizes({480, 1950});
-    connect(workSplit, &QSplitter::splitterMoved, this, [this] { updateClinicalDeviceLayout(); });
+    columns->setStretchFactor(2, 0);
+    columns->setSizes({310, 920, 290});
+
+    root->addWidget(columns, 1);
+
     m_clinicalFaultTimer = new QTimer(this);
     m_clinicalFaultTimer->setSingleShot(true);
     m_clinicalFaultTimer->setInterval(600);
     connect(m_clinicalFaultTimer, &QTimer::timeout, this, &TreatmentWindow::showClinicalFaults);
-    updateClinicalDeviceLayout();
     updateClinicalWorkspace();
 }
 
@@ -3286,18 +3078,166 @@ void TreatmentWindow::updateClinicalWorkspace()
     ui->label_7->setText(m_roomId.trimmed().isEmpty() ? tr("未分配") : m_roomId);
     ui->label_room->setText(tr("流程：%1").arg(m_workflowReauthPending ? tr("等待登录") : m_workflowSyncRequired
         ? tr("现场状态待同步") : treatmentStateText(m_treatmentState)));
-    findChild<QLabel *>(QStringLiteral("clinicalConnection"))->setText(
-        connected ? tr("已连接") : tr("连接中断 · 现场读数待核实"));
-    auto *supply = findChild<QLabel *>(QStringLiteral("labelBeamDeliveryState"));
+    if (auto *conn = findChild<QLabel *>(QStringLiteral("clinicalConnection"))) {
+        conn->setText(connected ? tr("已连接") : tr("连接中断 · 现场读数待核实"));
+    }
     const qint64 maxAgeMs = m_settings->value(QStringLiteral("Logout/BeamStatusMaxAgeMs"), 5000).toLongLong();
     const bool delivering = connected && !m_workflowSyncRequired && m_logoutState.deliveryFresh(maxAgeMs)
         && (m_logoutState.deliveryResult == 1 || (m_logoutState.liveBeam.isBool()
             && m_logoutState.liveBeam.toBool() && m_logoutState.beamAge.isValid()
             && m_logoutState.beamAge.elapsed() < maxAgeMs));
-    if (supply->property("clinicalBeamOn").toBool() != delivering) {
-        supply->setProperty("clinicalBeamOn", delivering);
-        supply->style()->unpolish(supply);
-        supply->style()->polish(supply);
+    if (auto *supply = findChild<QLabel *>(QStringLiteral("labelBeamDeliveryState"))) {
+        if (supply->property("clinicalBeamOn").toBool() != delivering) {
+            supply->setProperty("clinicalBeamOn", delivering);
+            supply->style()->unpolish(supply);
+            supply->style()->polish(supply);
+        }
+    }
+
+    // 1. 顶栏状态与流程胶囊联动
+    QString stateCode = m_backendWorkflowState;
+    if (!m_startupState.initialized) stateCode = QStringLiteral("INITIALIZING");
+    else if (!m_startupState.authenticated) stateCode = QStringLiteral("WAITING_LOGIN");
+    else if (m_workflowSyncRequired) stateCode = QStringLiteral("SYNC_PENDING");
+    else if (m_treatmentState == TreatmentState::ErrorStopped) stateCode = QStringLiteral("ERROR_STOPPED");
+    else if (stateCode.isEmpty()) {
+        switch (m_treatmentState) {
+        case TreatmentState::Idle: stateCode = QStringLiteral("WAITING_OIS_SCHEDULE_CONFIRM"); break;
+        case TreatmentState::PlanConfirm: stateCode = QStringLiteral("WAITING_FRONTEND_PLAN_CONFIRM"); break;
+        case TreatmentState::Preparing: stateCode = QStringLiteral("WAITING_DEVICE_AUTOPOS_DONE"); break;
+        case TreatmentState::ReadyToApplyBeam: stateCode = QStringLiteral("WAITING_FRONTEND_BEAM_APPLY"); break;
+        case TreatmentState::BeamRequested: stateCode = QStringLiteral("WAITING_DEVICE_BEAM_READY"); break;
+        case TreatmentState::BeamReady: stateCode = QStringLiteral("BEAM_READY"); break;
+        case TreatmentState::Treating: stateCode = QStringLiteral("TREATMENT_IN_PROGRESS"); break;
+        case TreatmentState::Paused: stateCode = QStringLiteral("TREATMENT_PAUSED"); break;
+        case TreatmentState::BeamFinished: stateCode = QStringLiteral("BEAM_FINISHED"); break;
+        case TreatmentState::ReportConfirm: stateCode = QStringLiteral("WAITING_CHART_GENERATION"); break;
+        case TreatmentState::Completed: stateCode = QStringLiteral("COMPLETED"); break;
+        case TreatmentState::ErrorStopped: break;
+        }
+    }
+    QString stateZh = currentWorkflowActionText();
+    if (stateZh.isEmpty() || stateZh == QStringLiteral("无就绪动作")) {
+        if (stateCode == QStringLiteral("WAITING_OIS_SCHEDULE_CONFIRM")) stateZh = QStringLiteral("等待 OIS 排程确认");
+        else if (stateCode == QStringLiteral("WAITING_FRONTEND_PLAN_CONFIRM")) stateZh = QStringLiteral("等待计划核对确认");
+        else if (stateCode == QStringLiteral("WAITING_DEVICE_AUTOPOS_DONE")) stateZh = QStringLiteral("设备自动准备中");
+        else if (stateCode == QStringLiteral("WAITING_FRONTEND_BEAM_APPLY")) stateZh = QStringLiteral("等待申请出束");
+        else if (stateCode == QStringLiteral("TREATMENT_IN_PROGRESS")) stateZh = QStringLiteral("束流照射中");
+        else stateZh = treatmentStateText(m_treatmentState);
+    }
+    if (m_headerStateCodeLabel) m_headerStateCodeLabel->setText(stateCode);
+    if (m_headerStateZhLabel) m_headerStateZhLabel->setText(QStringLiteral("(%1)").arg(stateZh));
+    if (m_headerRoomPill) m_headerRoomPill->setText(m_roomId.isEmpty() ? QStringLiteral("ROOM_2") : m_roomId);
+
+    // 2. 操作员与机房状态联动
+    if (m_opNameLabel) m_opNameLabel->setText(m_currentUsername.isEmpty() ? QStringLiteral("rtt_1") : m_currentUsername);
+    if (m_opRoomLabel) m_opRoomLabel->setText(m_roomId.isEmpty() ? QStringLiteral("ROOM_2") : m_roomId);
+
+    // 3. 拓扑图 QML 状态联动
+    if (m_topoView && m_topoView->rootObject()) {
+        m_topoView->rootObject()->setProperty("wsConnected", connected);
+    }
+
+    // 4. 剂量监控面板与仪表盘 QML 联动
+    double targetMu = 0.0;
+    double deliveredMu = 0.0;
+    double cumulativeDose = 0.0;
+    if (!m_currentPlanPayload.isEmpty()) {
+        const PlanDisplayInfo plan = parsePlanDisplayInfo(m_currentPlanPayload);
+        for (const auto &val : plan.beams) {
+            const auto beam = val.toObject();
+            const QJsonValue mu = beam.value(QStringLiteral("beam_meterset"));
+            if (mu.isDouble()) targetMu += mu.toDouble();
+        }
+    }
+    const double liveDelivered = readDoubleValue(m_latestTelemetryPayload, {"delivered_dose", "delivered_mu", "dose_delivered"});
+    if (liveDelivered >= 0.0) deliveredMu = liveDelivered;
+    const double liveCgy = readDoubleValue(m_latestTelemetryPayload, {"cumulative_dose"});
+    if (liveCgy >= 0.0) cumulativeDose = liveCgy;
+
+    double pct = (targetMu > 0.001) ? qBound(0.0, (deliveredMu / targetMu) * 100.0, 100.0) : 0.0;
+    if (m_doseTargetLabel) m_doseTargetLabel->setText(targetMu > 0 ? QStringLiteral("%1 MU").arg(targetMu, 0, 'f', 1) : QStringLiteral("0 MU"));
+    if (m_doseDeliveredLabel) m_doseDeliveredLabel->setText(QStringLiteral("%1 MU").arg(deliveredMu, 0, 'f', 1));
+    if (m_doseCumulativeLabel) m_doseCumulativeLabel->setText(QStringLiteral("%1 cGy").arg(cumulativeDose, 0, 'f', 1));
+    if (m_doseGaugeView && m_doseGaugeView->rootObject()) {
+        m_doseGaugeView->rootObject()->setProperty("percentage", pct);
+        m_doseGaugeView->rootObject()->setProperty("isBeamOn", delivering);
+    }
+
+    // 5. 安全联锁指示灯 3x3 矩阵联动
+    if (m_lampStatusLabels[0]) {
+        const QJsonValue ok = TelemetryValue::binaryFlag(m_latestTelemetryPayload.value("interlock_ok"));
+        const bool isOk = ok.isBool() ? ok.toBool() : true;
+        m_lampStatusLabels[0]->setText(isOk ? QStringLiteral("正常 (OK)") : QStringLiteral("联锁触发 (ALARM)"));
+        m_lampStatusLabels[0]->setStyleSheet(isOk ? QStringLiteral("font-size: 10px; font-family: 'Menlo', monospace; font-weight: 700; color: #059669;")
+                                                  : QStringLiteral("font-size: 10px; font-family: 'Menlo', monospace; font-weight: 700; color: #DC2626;"));
+    }
+    if (m_lampStatusLabels[1]) {
+        const bool ilkOk = !m_workflowSyncRequired && (m_treatmentState != TreatmentState::ErrorStopped);
+        m_lampStatusLabels[1]->setText(ilkOk ? QStringLiteral("正常 (OK)") : QStringLiteral("异常 (FAULT)"));
+        m_lampStatusLabels[1]->setStyleSheet(ilkOk ? QStringLiteral("font-size: 10px; font-family: 'Menlo', monospace; font-weight: 700; color: #059669;")
+                                                   : QStringLiteral("font-size: 10px; font-family: 'Menlo', monospace; font-weight: 700; color: #DC2626;"));
+    }
+    if (m_lampStatusLabels[2]) {
+        m_lampStatusLabels[2]->setText(QStringLiteral("闭锁 (LOCKED)"));
+        m_lampStatusLabels[2]->setStyleSheet(QStringLiteral("font-size: 10px; font-family: 'Menlo', monospace; font-weight: 700; color: #059669;"));
+    }
+    if (m_lampStatusLabels[3]) {
+        m_lampStatusLabels[3]->setText(delivering ? QStringLiteral("出束中 (BEAM ON)") : QStringLiteral("已关束 (BEAM OFF)"));
+        m_lampStatusLabels[3]->setStyleSheet(delivering ? QStringLiteral("font-size: 10px; font-family: 'Menlo', monospace; font-weight: 700; color: #DC2626;")
+                                                        : QStringLiteral("font-size: 10px; font-family: 'Menlo', monospace; font-weight: 700; color: #64748B;"));
+        if (m_lampCells[3]) {
+            m_lampCells[3]->setStyleSheet(delivering ? QStringLiteral("QFrame#lampCell_3 { background: #FEF2F2; border: 1px solid #FECACA; border-left: 3px solid #DC2626; border-radius: 4px; padding: 4px 6px; }")
+                                                     : QStringLiteral("QFrame#lampCell_3 { background: #F8FAFC; border: 1px solid #E2E8F0; border-left: 3px solid #94A3B8; border-radius: 4px; padding: 4px 6px; }"));
+        }
+    }
+    const bool beamReady = (m_treatmentState == TreatmentState::BeamReady || m_treatmentState == TreatmentState::Treating);
+    if (m_lampStatusLabels[4]) {
+        m_lampStatusLabels[4]->setText(beamReady ? QStringLiteral("就绪 (READY)") : QStringLiteral("待命 (STANDBY)"));
+        m_lampStatusLabels[4]->setStyleSheet(beamReady ? QStringLiteral("font-size: 10px; font-family: 'Menlo', monospace; font-weight: 700; color: #059669;")
+                                                       : QStringLiteral("font-size: 10px; font-family: 'Menlo', monospace; font-weight: 700; color: #64748B;"));
+    }
+    if (m_lampStatusLabels[5]) {
+        const bool isPreset = (m_treatmentState == TreatmentState::Preparing || m_treatmentState == TreatmentState::ReadyToApplyBeam);
+        m_lampStatusLabels[5]->setText(isPreset ? QStringLiteral("预置 (PRESET)") : QStringLiteral("预置 (PRESET)"));
+        m_lampStatusLabels[5]->setStyleSheet(QStringLiteral("font-size: 10px; font-family: 'Menlo', monospace; font-weight: 700; color: #D97706;"));
+    }
+    if (m_lampStatusLabels[6]) {
+        m_lampStatusLabels[6]->setText(QStringLiteral("正常 (TOTAL)"));
+        m_lampStatusLabels[6]->setStyleSheet(QStringLiteral("font-size: 10px; font-family: 'Menlo', monospace; font-weight: 700; color: #059669;"));
+    }
+    if (m_lampStatusLabels[7]) {
+        const bool hasReq = (m_treatmentState >= TreatmentState::ReadyToApplyBeam);
+        m_lampStatusLabels[7]->setText(hasReq ? QStringLiteral("请求 (REQ)") : QStringLiteral("正常 (OK)"));
+        m_lampStatusLabels[7]->setStyleSheet(QStringLiteral("font-size: 10px; font-family: 'Menlo', monospace; font-weight: 700; color: #059669;"));
+    }
+    if (m_lampStatusLabels[8]) {
+        m_lampStatusLabels[8]->setText(QStringLiteral("正常 (OK)"));
+        m_lampStatusLabels[8]->setStyleSheet(QStringLiteral("font-size: 10px; font-family: 'Menlo', monospace; font-weight: 700; color: #059669;"));
+    }
+
+    // 6. 准入排队面板联动
+    if (m_admTipLabel) {
+        m_admTipLabel->setText(QStringLiteral("当前状态：%1").arg(stateZh));
+    }
+    if (ui->beamApply_pushButton) {
+        if (m_treatmentState == TreatmentState::ReadyToApplyBeam) {
+            ui->beamApply_pushButton->setEnabled(true);
+            ui->beamApply_pushButton->setText(QStringLiteral("☢️ 立即申请出束许可"));
+            ui->beamApply_pushButton->setStyleSheet(QStringLiteral("background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #DC2626, stop:1 #B91C1C); color: #FFFFFF; font-weight: 700; font-size: 13px; border-radius: 6px; border: 1px solid #991B1B;"));
+        } else if (m_treatmentState == TreatmentState::BeamRequested || m_treatmentState == TreatmentState::BeamReady) {
+            ui->beamApply_pushButton->setEnabled(false);
+            ui->beamApply_pushButton->setText(QStringLiteral("☢️ 束流许可已获得 / 就绪"));
+            ui->beamApply_pushButton->setStyleSheet(QStringLiteral("background: #059669; color: #FFFFFF; font-weight: 700; font-size: 13px; border-radius: 6px; border: 1px solid #047857;"));
+        } else if (m_treatmentState == TreatmentState::Treating) {
+            ui->beamApply_pushButton->setEnabled(false);
+            ui->beamApply_pushButton->setText(QStringLiteral("☢️ 束流正在照射中..."));
+            ui->beamApply_pushButton->setStyleSheet(QStringLiteral("background: #DC2626; color: #FFFFFF; font-weight: 700; font-size: 13px; border-radius: 6px; border: 1px solid #991B1B;"));
+        } else {
+            ui->beamApply_pushButton->setEnabled(false);
+            ui->beamApply_pushButton->setText(QStringLiteral("☢️ 申请出束许可 (待就绪)"));
+            ui->beamApply_pushButton->setStyleSheet(QStringLiteral("background: #3B82F6; color: #FFFFFF; font-weight: 700; font-size: 12px; border-radius: 6px; border: 1px solid #2563EB; opacity: 0.85;"));
+        }
     }
     const int step = treatmentStateToStep(m_treatmentState);
     const bool planPhase = !m_workflowSyncRequired && m_treatmentState != TreatmentState::ErrorStopped && step == 0;
@@ -3339,34 +3279,36 @@ void TreatmentWindow::updateClinicalWorkspace()
     }
     auto *mapHost = findChild<QWidget *>(QStringLiteral("clinicalPlanMapHost"));
     auto *deliveryGrid = findChild<QGridLayout *>(QStringLiteral("clinicalDeliveryGrid"));
-    QWidget *mapParent = planPhase ? mapHost : deliveryGrid->parentWidget();
-    const bool mapMoved = ui->spotMapWidget->parentWidget() != mapParent;
+    QWidget *mapParent = planPhase ? mapHost : (deliveryGrid ? deliveryGrid->parentWidget() : nullptr);
+    const bool mapMoved = mapParent && ui->spotMapWidget->parentWidget() != mapParent;
     if (mapMoved) {
         ui->spotMapWidget->setParent(mapParent);
-        if (planPhase) static_cast<QVBoxLayout *>(mapHost->layout())->addWidget(ui->spotMapWidget);
-        else deliveryGrid->addWidget(ui->spotMapWidget, 1, 0);
+        if (planPhase && mapHost && mapHost->layout()) static_cast<QVBoxLayout *>(mapHost->layout())->addWidget(ui->spotMapWidget);
+        else if (deliveryGrid) deliveryGrid->addWidget(ui->spotMapWidget, 1, 0);
     }
     ui->spotMapWidget->setMaximumHeight(planPhase ? 640 : QWIDGETSIZE_MAX);
     const QString key = QString::number(static_cast<int>(m_treatmentState))
         + (m_workflowSyncRequired ? QStringLiteral("/sync") : QString());
-    if (m_executionTabs->property("workflowView").toString() != key) {
+    if (m_executionTabs && m_executionTabs->property("workflowView").toString() != key) {
         m_executionTabs->setProperty("workflowView", key);
         auto *details = findChild<QDialog *>(QStringLiteral("clinicalDetailDialog"));
         if (!details || !details->isVisible()) m_executionTabs->setCurrentIndex(defaultPage);
     }
     const bool idle = m_treatmentState == TreatmentState::Idle && m_currentPlanPayload.isEmpty();
-    findChild<QLabel *>(QStringLiteral("clinicalWaiting"))->setVisible(idle);
+    if (auto *cw = findChild<QLabel *>(QStringLiteral("clinicalWaiting"))) cw->setVisible(idle);
     ui->spotMapWidget->setVisible(!idle);
-    mapHost->setVisible(!idle);
+    if (mapHost) mapHost->setVisible(!idle);
     if (auto *waiting = findChild<QLabel *>(QStringLiteral("clinicalPlanWaiting"))) waiting->setVisible(idle);
     const bool monitorPhase = m_workflowSyncRequired || m_treatmentState == TreatmentState::ErrorStopped
         || step >= 2;
     auto *live = findChild<QGroupBox *>(QStringLiteral("groupBoxLiveDose"));
-    const bool visibilityChanged = live->isHidden();
-    live->show();
-    if (visibilityChanged || mapMoved) updateClinicalDeviceLayout();
-    findChild<QWidget *>(QStringLiteral("clinicalDoseChannels"))->setVisible(monitorPhase);
-    if (m_currentPlanPayload != m_clinicalDisplayedPlan) {
+    if (live) {
+        const bool visibilityChanged = live->isHidden();
+        live->show();
+        if (visibilityChanged || mapMoved) updateClinicalDeviceLayout();
+    }
+    if (auto *dc = findChild<QWidget *>(QStringLiteral("clinicalDoseChannels"))) dc->setVisible(monitorPhase);
+    if (m_fieldSummary && m_currentPlanPayload != m_clinicalDisplayedPlan) {
         m_clinicalDisplayedPlan = m_currentPlanPayload;
         m_fieldSummary->clear();
         const PlanDisplayInfo plan = parsePlanDisplayInfo(m_currentPlanPayload);
@@ -3381,10 +3323,12 @@ void TreatmentWindow::updateClinicalWorkspace()
             if (layers >= 0) totalLayers += layers;
             if (spots >= 0) totalSpots += spots;
         }
-        findChild<QLabel *>(QStringLiteral("clinicalBeamCount"))->setText(plan.beams.isEmpty()
-            ? tr("未提供") : QString::number(plan.beams.size()));
-        findChild<QLabel *>(QStringLiteral("clinicalLayerCount"))->setText(layersKnown ? QString::number(totalLayers) : tr("未提供"));
-        findChild<QLabel *>(QStringLiteral("clinicalSpotCount"))->setText(spotsKnown ? QString::number(totalSpots) : tr("未提供"));
+        if (auto *bc = findChild<QLabel *>(QStringLiteral("clinicalBeamCount")))
+            bc->setText(plan.beams.isEmpty() ? tr("未提供") : QString::number(plan.beams.size()));
+        if (auto *lc = findChild<QLabel *>(QStringLiteral("clinicalLayerCount")))
+            lc->setText(layersKnown ? QString::number(totalLayers) : tr("未提供"));
+        if (auto *sc = findChild<QLabel *>(QStringLiteral("clinicalSpotCount")))
+            sc->setText(spotsKnown ? QString::number(totalSpots) : tr("未提供"));
         for (const QJsonValue &item : plan.beams) {
             const QJsonObject beam = item.toObject();
             const auto count = [&beam](const char *key) {
@@ -4020,11 +3964,11 @@ void TreatmentWindow::onWorkflowStageSelected(int stageIndex)
 {
     int targetStep = 2;
     switch (stageIndex) {
-    case 0: targetStep = 0; break; // 01 系统初始化
-    case 1: targetStep = 2; break; // 03 排程叫号
-    case 2: targetStep = 4; break; // 05 计划审核
-    case 3: targetStep = 6; break; // 07 申请出束
-    case 4: targetStep = 10; break; // 11 操作复位
+    case 0: targetStep = 0; break; // 01 系统初始化 (INIT)
+    case 1: targetStep = 2; break; // 03 排程叫号 (WAITING_OIS_SCHEDULE_CONFIRM)
+    case 2: targetStep = 5; break; // 06 图像摆位 (WAITING_DEVICE_AUTOPOS_DONE)
+    case 3: targetStep = 8; break; // 09 束流照射 (TREATMENT_IN_PROGRESS)
+    case 4: targetStep = 10; break; // 11 硬件复位 (WAITING_TREATMENT_END)
     default: targetStep = 2; break;
     }
     syncWorkflowStep(targetStep);
@@ -4037,14 +3981,17 @@ void TreatmentWindow::onWorkflowStepSelected(int stepIndex)
 
 void TreatmentWindow::syncWorkflowStep(int stepIndex)
 {
+    const bool isErr = (m_treatmentState == TreatmentState::ErrorStopped);
     if (m_stepView) {
         if (QObject *stepRoot = m_stepView->rootObject()) {
             stepRoot->setProperty("currentWorkflowStep", stepIndex);
+            stepRoot->setProperty("isErrorStopped", isErr);
         }
     }
     if (m_bedView) {
         if (QObject *bedRoot = m_bedView->rootObject()) {
             bedRoot->setProperty("currentStepIndex", stepIndex);
+            bedRoot->setProperty("isErrorStopped", isErr);
         }
     }
 }

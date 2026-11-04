@@ -6,66 +6,68 @@ import QtQuick.Layouts
 Item {
     id: root
 
-    // 当前具体的 12 步工作流索引 (0 ~ 11，默认为 2 即 03 排程叫号)
+    // 当前具体的 12 步时序索引 (0 ~ 11，默认为 2 即 WAITING_OIS_SCHEDULE_CONFIRM)
     property int currentWorkflowStep: 2
+    property bool isErrorStopped: false
 
-    // 当用户点击阶段卡片时通知外部
+    // 点击某宏观阶段向外发射信号
     signal stageSelected(int stageIndex)
 
-    // 5 大主阶段分组定义（与网页版流程监控 100% 对应）
-    readonly property var stages: [
-        { num: "01", name: "初始化", totalSteps: 1, startStep: 0, endStep: 0 },
-        { num: "02", name: "叫号",   totalSteps: 3, startStep: 1, endStep: 3 },
-        { num: "03", name: "准备",   totalSteps: 2, startStep: 4, endStep: 5 },
-        { num: "04", name: "出束",   totalSteps: 2, startStep: 6, endStep: 9 },
-        { num: "05", name: "结束",   totalSteps: 2, startStep: 10, endStep: 11 }
+    // 5 大宏观临床状态定义 (与 Vue3 MACRO_PHASE_DEFS 1:1 严格对齐)
+    readonly property var macroPhases: [
+        { key: 'INIT',     title: '初始化', sub: 'INIT',     totalSteps: 1, startIdx: 0,  endIdx: 0 },
+        { key: 'PRESET',   title: '预置',   sub: 'PRESET',   totalSteps: 4, startIdx: 1,  endIdx: 4 },
+        { key: 'PREPARE',  title: '准备',   sub: 'PREPARE',  totalSteps: 3, startIdx: 5,  endIdx: 7 },
+        { key: 'BEAM',     title: '出束',   sub: 'BEAM',     totalSteps: 2, startIdx: 8,  endIdx: 9 },
+        { key: 'COMPLETE', title: '结案',   sub: 'COMPLETE', totalSteps: 2, startIdx: 10, endIdx: 11 }
     ]
 
-    // 根据当前具体步骤计算所属的主阶段 (0 ~ 4)
+    // 计算当前子状态归属的主阶段索引 (0 ~ 4)
     function currentStageIndex() {
         var s = root.currentWorkflowStep;
-        if (s <= 0) return 0;
-        if (s <= 3) return 1;
-        if (s <= 5) return 2;
-        if (s <= 9) return 3;
-        return 4;
+        for (var i = 0; i < macroPhases.length; ++i) {
+            var p = macroPhases[i];
+            if (s >= p.startIdx && s <= p.endIdx) return i;
+        }
+        return 0;
     }
 
-    // 动态计算每个阶段的进度文字（如 1/1, 2/3, 0/2）
-    function stageProgressText(stageIdx) {
+    // 动态计算每个阶段的状态 ('completed' | 'active' | 'pending')
+    function phaseStatus(stageIdx) {
+        if (root.isErrorStopped) return 'pending';
         var curStage = currentStageIndex();
-        var cfg = stages[stageIdx];
-        if (stageIdx < curStage) {
-            return cfg.totalSteps + " / " + cfg.totalSteps;
-        } else if (stageIdx === curStage) {
-            var doneInStage = 1;
-            if (stageIdx === 0) doneInStage = 1;
-            else if (stageIdx === 1) doneInStage = Math.min(cfg.totalSteps, Math.max(1, root.currentWorkflowStep - cfg.startStep + 1));
-            else if (stageIdx === 2) doneInStage = Math.min(cfg.totalSteps, Math.max(1, root.currentWorkflowStep - cfg.startStep + 1));
-            else if (stageIdx === 3) doneInStage = Math.min(cfg.totalSteps, Math.max(1, Math.floor((root.currentWorkflowStep - cfg.startStep) / 2) + 1));
-            else doneInStage = Math.min(cfg.totalSteps, Math.max(1, root.currentWorkflowStep - cfg.startStep + 1));
-            return doneInStage + " / " + cfg.totalSteps;
+        if (stageIdx < curStage) return 'completed';
+        if (stageIdx === curStage) return 'active';
+        return 'pending';
+    }
+
+    // 动态计算阶段内部比率文本 (与 Vue3 ratioText 1:1 一致，如 1/1, 2/4, 0/3)
+    function phaseRatioText(stageIdx) {
+        var status = phaseStatus(stageIdx);
+        var p = macroPhases[stageIdx];
+        if (status === 'completed') {
+            return p.totalSteps + "/" + p.totalSteps;
+        } else if (status === 'active') {
+            var currentStepInPhase = root.currentWorkflowStep - p.startIdx + 1;
+            return currentStepInPhase + "/" + p.totalSteps;
         } else {
-            return "0 / " + cfg.totalSteps;
+            return "0/" + p.totalSteps;
         }
     }
 
-    // 动态计算每个阶段的进度比率 (0.0 ~ 1.0)
-    function stageProgressRatio(stageIdx) {
-        var curStage = currentStageIndex();
-        var cfg = stages[stageIdx];
-        if (stageIdx < curStage) return 1.0;
-        if (stageIdx > curStage) return 0.0;
-        if (stageIdx === 0) return 1.0;
-        var doneInStage = 1;
-        if (stageIdx === 1) doneInStage = Math.min(cfg.totalSteps, Math.max(1, root.currentWorkflowStep - cfg.startStep + 1));
-        else if (stageIdx === 2) doneInStage = Math.min(cfg.totalSteps, Math.max(1, root.currentWorkflowStep - cfg.startStep + 1));
-        else if (stageIdx === 3) doneInStage = Math.min(cfg.totalSteps, Math.max(1, Math.floor((root.currentWorkflowStep - cfg.startStep) / 2) + 1));
-        else doneInStage = Math.min(cfg.totalSteps, Math.max(1, root.currentWorkflowStep - cfg.startStep + 1));
-        return doneInStage / cfg.totalSteps;
+    // 动态计算微进度条百分比 (0.0 ~ 1.0)
+    function phaseFillRatio(stageIdx) {
+        var status = phaseStatus(stageIdx);
+        var p = macroPhases[stageIdx];
+        if (status === 'completed') return 1.0;
+        if (status === 'active') {
+            var currentStepInPhase = root.currentWorkflowStep - p.startIdx + 1;
+            return Math.min(1.0, currentStepInPhase / p.totalSteps);
+        }
+        return 0.0;
     }
 
-    // 柔和现代色彩
+    // 柔和现代色彩配置
     readonly property color panelBg: "#FFFFFF"
     readonly property color panelBorder: "#E2E8F0"
     readonly property color textPrimary: "#0F172A"
@@ -89,7 +91,7 @@ Item {
             anchors.margins: 10
             spacing: 6
 
-            // 顶部：标题与状态图例 (对标网页版)
+            // 顶部：标题与状态图例 (与 Vue3 HeaderBar 1:1 一致)
             RowLayout {
                 Layout.fillWidth: true
 
@@ -140,32 +142,31 @@ Item {
                 }
             }
 
-            // 下部：5 个阶段卡片
+            // 下部：5 大宏观阶段卡片 (Macro Phase Step Bar)
             RowLayout {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 spacing: 8
 
                 Repeater {
-                    model: root.stages.length
+                    model: root.macroPhases.length
 
                     Rectangle {
-                        id: stageCard
+                        id: phaseStepItem
                         required property int index
                         Layout.fillWidth: true
                         Layout.fillHeight: true
                         radius: 6
 
-                        readonly property int curStage: root.currentStageIndex()
-                        readonly property bool isDone: stageCard.index < stageCard.curStage
-                        readonly property bool isActive: stageCard.index === stageCard.curStage
-                        readonly property bool isPending: stageCard.index > stageCard.curStage
+                        readonly property string st: root.phaseStatus(phaseStepItem.index)
+                        readonly property bool isCompleted: st === 'completed'
+                        readonly property bool isActive: st === 'active'
 
-                        color: stageCard.isActive ? "#EFF6FF" :
-                               stageCard.isDone ? "#F0FDF4" : "#F8FAFC"
-                        border.color: stageCard.isActive ? "#3B82F6" :
-                                      stageCard.isDone ? "#86EFAC" : "#E2E8F0"
-                        border.width: stageCard.isActive ? 1.5 : 1
+                        color: isActive ? "#EFF6FF" :
+                               isCompleted ? "#F0FDF4" : "#F8FAFC"
+                        border.color: isActive ? "#3B82F6" :
+                                      isCompleted ? "#86EFAC" : "#E2E8F0"
+                        border.width: isActive ? 1.5 : 1
 
                         ColumnLayout {
                             anchors.fill: parent
@@ -174,24 +175,51 @@ Item {
 
                             RowLayout {
                                 Layout.fillWidth: true
-                                Text {
-                                    text: root.stages[stageCard.index].num + " " + root.stages[stageCard.index].name
-                                    font.pixelSize: 12
-                                    font.bold: true
-                                    color: stageCard.isActive ? root.activeBlue :
-                                           stageCard.isDone ? "#15803D" : root.textMuted
+
+                                // 序号与阶段名
+                                Row {
+                                    spacing: 4
+                                    Text {
+                                        text: "0" + (phaseStepItem.index + 1)
+                                        font.pixelSize: 10
+                                        font.family: "Menlo"
+                                        font.bold: true
+                                        color: phaseStepItem.isActive ? root.activeBlue :
+                                               phaseStepItem.isCompleted ? "#15803D" : root.textMuted
+                                    }
+                                    Text {
+                                        text: root.macroPhases[phaseStepItem.index].title
+                                        font.pixelSize: 12
+                                        font.bold: true
+                                        color: phaseStepItem.isActive ? root.activeBlue :
+                                               phaseStepItem.isCompleted ? "#15803D" : root.textPrimary
+                                    }
                                 }
+
                                 Item { Layout.fillWidth: true }
-                                Text {
-                                    text: root.stageProgressText(stageCard.index)
-                                    font.pixelSize: 10
-                                    font.family: "Menlo"
-                                    color: stageCard.isActive ? root.activeBlue :
-                                           stageCard.isDone ? "#16A34A" : "#94A3B8"
+
+                                // 状态圆标 + 比率文字
+                                Row {
+                                    spacing: 4
+                                    Text {
+                                        text: phaseStepItem.isCompleted ? "✓" : (phaseStepItem.isActive ? "●" : "○")
+                                        font.pixelSize: 9
+                                        color: phaseStepItem.isCompleted ? "#16A34A" :
+                                               phaseStepItem.isActive ? root.activeBlue : "#94A3B8"
+                                        anchors.verticalCenter: parent.verticalCenter
+                                    }
+                                    Text {
+                                        text: root.phaseRatioText(phaseStepItem.index)
+                                        font.pixelSize: 10
+                                        font.family: "Menlo"
+                                        color: phaseStepItem.isActive ? root.activeBlue :
+                                               phaseStepItem.isCompleted ? "#16A34A" : "#94A3B8"
+                                        anchors.verticalCenter: parent.verticalCenter
+                                    }
                                 }
                             }
 
-                            // 底部细长微进度条
+                            // 底部微进度管 (phase-micro-progress-track)
                             Rectangle {
                                 Layout.fillWidth: true
                                 implicitHeight: 3
@@ -203,8 +231,8 @@ Item {
                                     anchors.top: parent.top
                                     anchors.bottom: parent.bottom
                                     radius: 1.5
-                                    width: parent.width * root.stageProgressRatio(stageCard.index)
-                                    color: stageCard.isDone ? root.doneGreen : root.activeBlue
+                                    width: parent.width * root.phaseFillRatio(phaseStepItem.index)
+                                    color: phaseStepItem.isCompleted ? root.doneGreen : root.activeBlue
                                 }
                             }
                         }
@@ -213,7 +241,7 @@ Item {
                             anchors.fill: parent
                             cursorShape: Qt.PointingHandCursor
                             onClicked: {
-                                root.stageSelected(stageCard.index);
+                                root.stageSelected(phaseStepItem.index);
                             }
                         }
                     }

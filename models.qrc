@@ -2,6 +2,8 @@
     <qresource prefix="/models">
         <file>Bed3DView.qml</file>
         <file>StepProgressBar.qml</file>
+        <file>TopologyCard.qml</file>
+        <file>DoseDashboard.qml</file>
         <file>eye.svg</file>
         <file>eye-slash.svg</file>
     </qresource>
