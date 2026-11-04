@@ -44,6 +44,8 @@
 #include <QPushButton>
 #include <QGroupBox>
 #include <QScrollArea>
+#include <QGuiApplication>
+#include <QScreen>
 #include <QTabWidget>
 #include <QToolButton>
 #include <QIcon>
@@ -1077,6 +1079,15 @@ TreatmentWindow::TreatmentWindow(WebSocketClient *webSocketClient,
 {
     ui->setupUi(this);
 
+    auto *mainScrollArea = new QScrollArea(this);
+    mainScrollArea->setObjectName(QStringLiteral("mainScrollArea"));
+    mainScrollArea->setWidget(ui->centralwidget);
+    mainScrollArea->setWidgetResizable(true);
+    mainScrollArea->setFrameShape(QFrame::NoFrame);
+    mainScrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+    mainScrollArea->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+    setCentralWidget(mainScrollArea);
+
     m_startupState.authenticated = !username.trimmed().isEmpty()
         && loginResponse.value(QStringLiteral("type")) == QStringLiteral("TASK")
         && loginResponse.value(QStringLiteral("cmd")) == QStringLiteral("TASK_LOGIN_SUCCESS");
@@ -1740,7 +1751,14 @@ void TreatmentWindow::initUiLayoutTuning()
     ui->labelCurrentTreatmentAction = action;
     delete oldAction;
     ui->verticalLayout_flowBox->setSizeConstraint(QLayout::SetMinimumSize);
-    resize(1600, 980);
+    if (auto *screen = QGuiApplication::primaryScreen()) {
+        const QRect available = screen->availableGeometry();
+        const int targetWidth = qMin(1600, qMax(1024, static_cast<int>(available.width() * 0.96)));
+        const int targetHeight = qMin(960, qMax(680, static_cast<int>(available.height() * 0.94)));
+        resize(targetWidth, targetHeight);
+    } else {
+        resize(1280, 800);
+    }
     ui->verticalLayout_root->setSpacing(6);
     ui->horizontalLayout_topArea->setSpacing(8);
 

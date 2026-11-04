@@ -4,8 +4,8 @@ import QtQuick.Controls
 
 Item {
     id: root
-    implicitWidth: 960
-    implicitHeight: 520
+    implicitWidth: 640
+    implicitHeight: 340
 
     // ==========================================
     // 1. 数据绑定与平滑过渡
@@ -66,7 +66,7 @@ Item {
         // 左侧卡片：床坐标 (六自由度)
         // =====================================================================
         Rectangle {
-            Layout.preferredWidth: 230
+            Layout.preferredWidth: Math.min(230, Math.max(160, root.width * 0.22))
             Layout.fillHeight: true
             radius: 8
             color: root.cardBg
@@ -267,7 +267,7 @@ Item {
 
             readonly property real centerX: width / 2
             readonly property real centerY: height / 2
-            readonly property real orbitRadius: Math.max(120, Math.min(width, height) * 0.38)
+            readonly property real orbitRadius: Math.max(65, Math.min(width * 0.44, height * 0.35))
 
             // Canvas 绘制平滑的底层轨道与高亮流光弧
             Canvas {
@@ -428,7 +428,7 @@ Item {
             // =================================================================
             Rectangle {
                 id: centerCore
-                width: Math.min(220, orbitContainer.orbitRadius * 1.25)
+                width: Math.min(200, Math.max(110, orbitContainer.orbitRadius * 1.15))
                 height: width
                 radius: width / 2
                 anchors.centerIn: parent
@@ -478,11 +478,11 @@ Item {
                         color: root.textMuted
                     }
 
-                    // 核心当前状态名称（粗体大字）
+                    // 核心当前状态名称（粗体大字，弹性自适应）
                     Text {
                         Layout.alignment: Qt.AlignHCenter
                         text: root.workflowSteps[root.currentStepIndex].name
-                        font.pixelSize: 22
+                        font.pixelSize: Math.max(13, Math.min(22, centerCore.width * 0.13))
                         font.bold: true
                         color: root.textMain
                     }
@@ -523,7 +523,7 @@ Item {
         // 右侧微控制面板：硬件联动微卡片
         // =====================================================================
         Rectangle {
-            Layout.preferredWidth: 170
+            Layout.preferredWidth: Math.min(170, Math.max(120, root.width * 0.16))
             Layout.fillHeight: true
             radius: 8
             color: root.cardBg

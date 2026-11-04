@@ -11,6 +11,16 @@ QWidget {
     font-size: 13px;
 }
 
+/* 主滚动区域完全无缝透明 */
+QScrollArea#mainScrollArea {
+    background: #F1F5F9;
+    border: none;
+}
+
+QScrollArea#mainScrollArea > QWidget > QWidget {
+    background: #F1F5F9;
+}
+
 /* --- 卡片与分组容器 (Clean Modern Medical Cards) --- */
 QFrame#cardFrame,
 QFrame#panelFrame,
