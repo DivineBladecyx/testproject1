@@ -15,43 +15,38 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 显式使用稳定的 Python 3.11，避免 WindowsApps 微软商店存根权限冲突 (EACCES)
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
-      - name: Install aqtinstall and Ninja
+      - name: Install aqtinstall
         run: |
           python -m pip install --upgrade pip
           python -m pip install aqtinstall
-          choco install ninja
 
-      # 自动从官方镜像静默安装 Qt 6.8.0 及其全部拓展组件（Svg 已内置于基础包，无需单独声明）
+      # 自动从官方镜像静默安装 Qt 6.8.0 及其全部拓展组件
       - name: Install Qt 6.8.0
         run: |
           python -m aqt install-qt windows desktop 6.8.0 win64_msvc2022_64 --outputdir C:\Qt -m qtwebsockets qtquick3d qtquicktimeline
 
-      - name: Set up MSVC Developer Command Prompt
-        uses: ilammy/msvc-dev-cmd@v1
-
+      # 使用 Windows 原生 Visual Studio 2022 引擎与正斜杠路径，百分之百稳定
       - name: Configure CMake
         shell: cmd
         run: |
-          set "PATH=C:\Qt\6.8.0\msvc2022_64\bin;%PATH%"
-          cmake -B build_win -G "Ninja" -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="C:\Qt\6.8.0\msvc2022_64"
+          cmake -B build_win -G "Visual Studio 17 2022" -A x64 -DCMAKE_PREFIX_PATH="C:/Qt/6.8.0/msvc2022_64"
 
       - name: Build SIMM Executable
         shell: cmd
         run: |
-          cmake --build build_win --config Release --target SIMM
+          cmake --build build_win --config Release --target SIMM --parallel
 
       - name: Collect Release Package (windeployqt)
         shell: cmd
         run: |
           mkdir SIMM_Windows_x64
           mkdir SIMM_Windows_x64\config
-          copy build_win\SIMM.exe SIMM_Windows_x64\
+          copy build_win\Release\SIMM.exe SIMM_Windows_x64\
           copy config\app_config.ini SIMM_Windows_x64\config\
           C:\Qt\6.8.0\msvc2022_64\bin\windeployqt.exe --qmldir . SIMM_Windows_x64\SIMM.exe
 
