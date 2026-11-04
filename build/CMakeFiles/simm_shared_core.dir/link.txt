@@ -1,2 +1,0 @@
-/usr/bin/ar qc libsimm_shared_core.a CMakeFiles/simm_shared_core.dir/simm_shared_core_autogen/mocs_compilation.cpp.o CMakeFiles/simm_shared_core.dir/shared/app/clientbootstrap.cpp.o CMakeFiles/simm_shared_core.dir/shared/auth/logindialog.cpp.o CMakeFiles/simm_shared_core.dir/shared/network/websocketclient.cpp.o CMakeFiles/simm_shared_core.dir/shared/theme/thememanager.cpp.o CMakeFiles/simm_shared_core.dir/shared/audit/auditlogger.cpp.o CMakeFiles/simm_shared_core.dir/simm_shared_core_autogen/EWIEGA46WW/qrc_resources.cpp.o
-/usr/bin/ranlib libsimm_shared_core.a

@@ -39,19 +39,19 @@ jobs:
         shell: cmd
         run: |
           set "PATH=C:\Qt\6.8.0\msvc2022_64\bin;%PATH%"
-          cmake -B build -G "Ninja" -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="C:\Qt\6.8.0\msvc2022_64"
+          cmake -B build_win -G "Ninja" -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="C:\Qt\6.8.0\msvc2022_64"
 
       - name: Build SIMM Executable
         shell: cmd
         run: |
-          cmake --build build --config Release --target SIMM
+          cmake --build build_win --config Release --target SIMM
 
       - name: Collect Release Package (windeployqt)
         shell: cmd
         run: |
           mkdir SIMM_Windows_x64
           mkdir SIMM_Windows_x64\config
-          copy build\SIMM.exe SIMM_Windows_x64\
+          copy build_win\SIMM.exe SIMM_Windows_x64\
           copy config\app_config.ini SIMM_Windows_x64\config\
           C:\Qt\6.8.0\msvc2022_64\bin\windeployqt.exe --qmldir . SIMM_Windows_x64\SIMM.exe
 
