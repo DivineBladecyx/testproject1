@@ -3953,6 +3953,7 @@ void TreatmentWindow::initBedView()
 
     overlayLayout->addWidget(m_bedView, 0, 0);
     overlayLayout->addWidget(positionPanel, 0, 0, Qt::AlignTop | Qt::AlignRight);
+    positionPanel->hide(); // 采用 QML 现代全功能六自由度与环形状态机面板，隐藏重叠的老旧面板
     positionPanel->raise();
 
     ui->horizontalLayout_bed->setSpacing(0);
@@ -4864,6 +4865,27 @@ void TreatmentWindow::updateStepBar()
     if (m_stepView) {
         if (QObject *root = m_stepView->rootObject()) {
             root->setProperty("currentStep", treatmentStateToStep(m_treatmentState));
+        }
+    }
+    if (m_bedView) {
+        if (QObject *bedRoot = m_bedView->rootObject()) {
+            int orbitIndex = 2; // 默认 03 排程叫号
+            switch (m_treatmentState) {
+            case TreatmentState::Idle: orbitIndex = 0; break;
+            case TreatmentState::PlanConfirm: orbitIndex = 3; break;
+            case TreatmentState::Preparing: orbitIndex = 5; break;
+            case TreatmentState::ReadyToApplyBeam: orbitIndex = 6; break;
+            case TreatmentState::BeamRequested:
+            case TreatmentState::BeamReady: orbitIndex = 7; break;
+            case TreatmentState::Treating: orbitIndex = 8; break;
+            case TreatmentState::Paused: orbitIndex = 9; break;
+            case TreatmentState::BeamFinished:
+            case TreatmentState::ReportConfirm: orbitIndex = 10; break;
+            case TreatmentState::Completed: orbitIndex = 11; break;
+            case TreatmentState::ErrorStopped: orbitIndex = 9; break;
+            default: orbitIndex = 2; break;
+            }
+            bedRoot->setProperty("currentStepIndex", orbitIndex);
         }
     }
     const int step = treatmentStateToStep(m_treatmentState);

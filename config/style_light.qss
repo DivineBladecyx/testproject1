@@ -1,23 +1,24 @@
 /* ==========================================================================
-   SIMM Medical Treatment Console - Soft Light Theme (Fluent WinUI 3)
+   SIMM Medical Treatment Console - Carbon-Ion Therapy Web-Level Theme (Fluent Slate)
+   对标网页版碳离子治疗系统 C-NEXUS-TCS2000 设计语言
    ========================================================================== */
 
 QMainWindow,
 QWidget {
-    background: #F8F9FA;
+    background: #F1F5F9;
     color: #0F172A;
-    font-family: "Helvetica Neue", "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    font-family: "PingFang SC", "Microsoft YaHei", "Segoe UI", -apple-system, sans-serif;
     font-size: 13px;
 }
 
-/* --- 卡片与分组容器 (Soft Light Surfaces) --- */
+/* --- 卡片与分组容器 (Clean Modern Medical Cards) --- */
 QFrame#cardFrame,
 QFrame#panelFrame,
 QGroupBox {
     background: #FFFFFF;
     border: 1px solid #E2E8F0;
     border-radius: 8px;
-    margin-top: 10px;
+    margin-top: 8px;
     padding-top: 8px;
 }
 
@@ -25,14 +26,22 @@ QGroupBox::title {
     subcontrol-origin: margin;
     left: 10px;
     padding: 0 6px;
-    color: #0284C7;
-    font-weight: 600;
+    color: #0F172A;
+    font-weight: 700;
     font-size: 13px;
 }
 
-/* 消除床位视口的生硬边框，与 QML 坐标画布一体化 */
+/* 床位视口与核心中控台无缝融合 */
 QGroupBox#groupBoxBedPreview {
-    background: #F1F5F9;
+    background: #F8FAFC;
+    border: 1px solid #E2E8F0;
+    border-radius: 8px;
+}
+
+/* 顶部流程与安全卡片专用浅色底 */
+QWidget#widget_topBanner,
+QFrame#frameSafetyInterlocks {
+    background: #FFFFFF;
     border: 1px solid #E2E8F0;
     border-radius: 8px;
 }
@@ -53,9 +62,9 @@ QLabel#label_title_status,
 QLabel#label_title_ops,
 QLabel#label_title_bed,
 QLabel#label_preview_title {
-    color: #0284C7;
-    font-weight: 600;
-    font-size: 14px;
+    color: #0F172A;
+    font-weight: 700;
+    font-size: 13px;
 }
 
 QLabel#patient_name,
@@ -63,39 +72,39 @@ QLabel#label_user,
 QLabel#label_room,
 QLabel#label_time {
     color: #0F172A;
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 600;
 }
 
 QLabel#labelTopPrescriptionDose,
 QLabel#label_30 {
-    color: #0284C7;
+    color: #2563EB;
     font-size: 18px;
     font-weight: 700;
     font-family: "Menlo", "Monaco", monospace;
 }
 
-/* --- 按钮 (Fluent 柔和浅色) --- */
+/* --- 按钮 (Modern Fluent Slate & Tech Blue) --- */
 QPushButton {
     background: #FFFFFF;
     border: 1px solid #CBD5E1;
     border-radius: 6px;
-    padding: 6px 14px;
-    min-height: 22px;
+    padding: 5px 12px;
+    min-height: 24px;
     color: #334155;
     font-weight: 500;
     font-size: 12px;
 }
 
 QPushButton:hover {
-    background: #F1F5F9;
-    border: 1px solid #0284C7;
-    color: #0284C7;
+    background: #EFF6FF;
+    border: 1px solid #93C5FD;
+    color: #1D4ED8;
 }
 
 QPushButton:pressed {
-    background: #E2E8F0;
-    border: 1px solid #0369A1;
+    background: #DBEAFE;
+    border: 1px solid #2563EB;
 }
 
 QPushButton:disabled {
@@ -104,37 +113,68 @@ QPushButton:disabled {
     border: 1px solid #E2E8F0;
 }
 
-/* 核心行动按钮 (柔和医用蓝) */
-QPushButton#beamApply_pushButton,
-QPushButton#confirmPlan_pushButton {
-    background: #0284C7;
+/* 申请出束许可核心药丸大按钮（与网页版一致） */
+QPushButton#beamApply_pushButton {
+    background: #2563EB;
     color: #FFFFFF;
-    border: 1px solid #0284C7;
+    border: none;
+    border-radius: 8px;
+    min-height: 38px;
+    font-size: 14px;
+    font-weight: 700;
+    padding: 6px 18px;
+}
+
+QPushButton#beamApply_pushButton:hover {
+    background: #1D4ED8;
+}
+
+QPushButton#beamApply_pushButton:pressed {
+    background: #1E40AF;
+}
+
+/* 计划详情与排程确认按钮 */
+QPushButton#confirmPlan_pushButton,
+QPushButton#todaySchedule_pushButton {
+    background: #2563EB;
+    color: #FFFFFF;
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+    min-height: 28px;
+}
+
+QPushButton#confirmPlan_pushButton:hover,
+QPushButton#todaySchedule_pushButton:hover {
+    background: #1D4ED8;
+}
+
+QPushButton#planDetail_pushButton {
+    background: #EFF6FF;
+    color: #1D4ED8;
+    border: 1px solid #BFDBFE;
+    border-radius: 6px;
+    font-weight: 600;
+    min-height: 28px;
+}
+
+QPushButton#planDetail_pushButton:hover {
+    background: #DBEAFE;
+    border: 1px solid #93C5FD;
+}
+
+/* 注销与紧急停止按钮 */
+QPushButton#logout_pushButton {
+    color: #DC2626;
+    border: 1px solid #FECDD3;
+    background: #FFF1F2;
+    border-radius: 6px;
     font-weight: 600;
 }
 
-QPushButton#beamApply_pushButton:hover,
-QPushButton#confirmPlan_pushButton:hover {
-    background: #0EA5E9;
-    border: 1px solid #0EA5E9;
-}
-
-QPushButton#beamApply_pushButton:pressed,
-QPushButton#confirmPlan_pushButton:pressed {
-    background: #0369A1;
-}
-
-/* 注销按钮 (柔和粉红) */
-QPushButton#logout_pushButton {
-    color: #E11D48;
-    border: 1px solid #FECDD3;
-    background: #FFF1F2;
-}
-
 QPushButton#logout_pushButton:hover {
-    background: #FFE4E6;
+    background: #FEE2E2;
     border: 1px solid #FDA4AF;
-    color: #BE123C;
 }
 
 /* --- 输入控件、下拉框、表格与面板 --- */
@@ -159,7 +199,7 @@ QLineEdit {
 
 QLineEdit:focus,
 QComboBox:focus {
-    border: 1px solid #0284C7;
+    border: 1px solid #2563EB;
     background: #FFFFFF;
 }
 
@@ -173,21 +213,21 @@ QComboBox::drop-down {
 QComboBox QAbstractItemView {
     background: #FFFFFF;
     border: 1px solid #CBD5E1;
-    selection-background-color: #0284C7;
+    selection-background-color: #2563EB;
     selection-color: #FFFFFF;
 }
 
-/* 表格 (Table View) 柔和浅色设计 */
+/* 表格 (Table View) 纯白清爽设计 */
 QTableWidget,
 QTableView {
     gridline-color: #F1F5F9;
     alternate-background-color: #F8FAFC;
-    selection-background-color: #E0F2FE;
-    selection-color: #0369A1;
+    selection-background-color: #EFF6FF;
+    selection-color: #1D4ED8;
 }
 
 QHeaderView::section {
-    background: #F1F5F9;
+    background: #F8FAFC;
     color: #475569;
     padding: 6px 8px;
     border: none;
@@ -211,17 +251,17 @@ QTabBar::tab {
 QTabBar::tab:selected {
     background: #FFFFFF;
     border-color: #E2E8F0;
-    border-top: 2px solid #0284C7;
-    color: #0284C7;
+    border-top: 2px solid #2563EB;
+    color: #2563EB;
     font-weight: 600;
 }
 
 QTabBar::tab:hover:!selected {
     background: #E2E8F0;
-    color: #1E293B;
+    color: #0F172A;
 }
 
-/* 滚动条 (Scroll Bar) 极简无边框 */
+/* 极简清爽滚动条 */
 QScrollBar:vertical {
     background: transparent;
     width: 6px;
@@ -268,7 +308,7 @@ QScrollBar::sub-line:horizontal {
 
 /* 状态栏 (Status Bar) */
 QStatusBar {
-    background: #F8F9FA;
+    background: #FFFFFF;
     color: #64748B;
     border-top: 1px solid #E2E8F0;
     font-size: 12px;
