@@ -27,10 +27,10 @@ jobs:
           python -m pip install aqtinstall
           choco install ninja
 
-      # 自动从官方镜像静默安装 Qt 6.8.0 及其全部拓展组件
+      # 自动从官方镜像静默安装 Qt 6.8.0 及其全部拓展组件（Svg 已内置于基础包，无需单独声明）
       - name: Install Qt 6.8.0
         run: |
-          python -m aqt install-qt windows desktop 6.8.0 win64_msvc2022_64 --outputdir C:\Qt -m qtwebsockets qtquick3d qtsvg qtquicktimeline
+          python -m aqt install-qt windows desktop 6.8.0 win64_msvc2022_64 --outputdir C:\Qt -m qtwebsockets qtquick3d qtquicktimeline
 
       - name: Set up MSVC Developer Command Prompt
         uses: ilammy/msvc-dev-cmd@v1
